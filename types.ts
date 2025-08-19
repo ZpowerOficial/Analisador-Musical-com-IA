@@ -48,9 +48,14 @@ export interface SoundEngineering {
 
 export interface LyricalAnalysis {
   theme: string;
+  narrativePerspective: string;
+  emotionalTone: string;
   narrativeStructure: string;
   literaryDevices: string[];
   rhymeScheme: string;
+  vocabularyComplexity: string;
+  culturalReferences: string[];
+  structure: string;
 }
 
 export interface CulturalContext {

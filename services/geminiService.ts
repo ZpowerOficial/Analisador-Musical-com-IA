@@ -92,7 +92,7 @@ const getYouTubeVideoInfo = async (videoId: string): Promise<{title: string, aut
       title: data.title || '',
       author_name: data.author_name || ''
     };
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Erro ao obter informações do vídeo:', error);
     return null;
   }
@@ -528,11 +528,11 @@ export const analyzeMusic = async (
       },
     });
 
-    const text = response.text.trim();
+    const text = response.text?.trim() || '';
     const parsedData: Analysis = JSON.parse(text);
     return parsedData;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling Gemini API:", error);
 
     // Tratamento específico para diferentes tipos de erro
@@ -618,7 +618,7 @@ export const analyzePlaylist = async (
       // Pequena pausa para respeitar rate limits
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Erro ao analisar ${video.title}:`, error);
       // Continuar com as outras músicas mesmo se uma falhar
     }
