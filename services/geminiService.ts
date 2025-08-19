@@ -1,6 +1,58 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Analysis } from '../types';
+import type { Analysis, PlaylistAnalysis } from '../types';
+import YouTubeService, { type YouTubeVideoData, type YouTubePlaylistData } from './youtube.service';
+import LastFmService, { type LastFmTrackInfo, type LastFmArtistInfo } from './lastfm.service';
+import LyricsService, { type LyricsData, type LyricsAnalysis } from './lyrics.service';
+
+/**
+ * Dados consolidados para análise musical profissional
+ */
+export interface ConsolidatedMusicData {
+  // Dados básicos
+  title: string;
+  artist: string;
+  album?: string;
+  duration: number; // em segundos
+
+  // Dados do YouTube
+  youtube?: {
+    videoId: string;
+    channelTitle: string;
+    description: string;
+    viewCount: number;
+    likeCount: number;
+    publishedAt: string;
+    tags: string[];
+    categoryId: string;
+  };
+
+  // Dados do Last.fm
+  lastfm?: {
+    playcount: number;
+    listeners: number;
+    tags: Array<{ name: string; count: number }>;
+    wiki?: { summary: string; content: string };
+    similar: Array<{ name: string; artist: string; match: number }>;
+    artistInfo?: LastFmArtistInfo;
+    popularityAnalysis: {
+      popularityScore: number;
+      trendingStatus: string;
+      genreRelevance: number;
+      culturalImpact: string;
+    };
+  };
+
+  // Dados de letras
+  lyrics?: {
+    data: LyricsData;
+    analysis: LyricsAnalysis;
+  };
+
+  // Metadados de análise
+  platform: 'youtube' | 'spotify' | 'mixed';
+  analysisTimestamp: string;
+}
 
 // Função para extrair o ID do vídeo do YouTube
 const extractYouTubeVideoId = (url: string): string | null => {
@@ -46,7 +98,7 @@ const getYouTubeVideoInfo = async (videoId: string): Promise<{title: string, aut
   }
 };
 
-const analysisSchema = {
+const advancedAnalysisSchema = {
   type: Type.OBJECT,
   properties: {
     error: {
@@ -140,57 +192,330 @@ const analysisSchema = {
         },
         required: ["historicalSignificance", "influences", "impact"]
     },
+    genreAnalysis: {
+        type: Type.OBJECT,
+        properties: {
+            primaryGenre: { type: Type.STRING, description: "Gênero musical principal identificado com precisão acadêmica." },
+            subgenres: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Lista de subgêneros específicos presentes na música." },
+            genreConfidence: { type: Type.INTEGER, description: "Nível de confiança na classificação de gênero (0-100)." },
+            crossGenreInfluences: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Influências de outros gêneros detectadas." },
+            genreEvolution: { type: Type.STRING, description: "Como esta música se relaciona com a evolução do gênero." },
+            regionalInfluences: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Influências regionais ou culturais específicas." }
+        },
+        required: ["primaryGenre", "subgenres", "genreConfidence", "crossGenreInfluences", "genreEvolution", "regionalInfluences"]
+    },
+    flowAnalysis: {
+        type: Type.OBJECT,
+        properties: {
+            overallFlow: { type: Type.STRING, description: "Análise geral do flow e cadência da música." },
+            rhythmicComplexity: { type: Type.INTEGER, description: "Complexidade rítmica em escala de 1-10." },
+            syncopationLevel: { type: Type.INTEGER, description: "Nível de sincopação presente (1-10)." },
+            groovePattern: { type: Type.STRING, description: "Padrão de groove característico identificado." },
+            rhythmicVariations: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Variações rítmicas notáveis ao longo da música." },
+            polyrhythmicElements: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Elementos polirrítmicos presentes." }
+        },
+        required: ["overallFlow", "rhythmicComplexity", "syncopationLevel", "groovePattern", "rhythmicVariations", "polyrhythmicElements"]
+    },
+    popularityMetrics: {
+        type: Type.OBJECT,
+        properties: {
+            globalPopularity: { type: Type.INTEGER, description: "Popularidade global estimada (0-100)." },
+            regionalPopularity: { type: Type.STRING, description: "Descrição da popularidade por região geográfica." },
+            trendingStatus: { type: Type.STRING, description: "Status de tendência: rising, stable, declining, viral, classic." },
+            culturalImpact: { type: Type.STRING, description: "Impacto cultural: minimal, moderate, significant, revolutionary." },
+            crossoverAppeal: { type: Type.INTEGER, description: "Apelo crossover entre diferentes audiências (0-100)." }
+        },
+        required: ["globalPopularity", "regionalPopularity", "trendingStatus", "culturalImpact", "crossoverAppeal"]
+    },
+    technicalAnalysis: {
+        type: Type.OBJECT,
+        properties: {
+            productionQuality: { type: Type.INTEGER, description: "Qualidade da produção em escala de 1-10." },
+            mixingTechniques: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Técnicas de mixagem identificadas." },
+            masteringApproach: { type: Type.STRING, description: "Abordagem de masterização utilizada." },
+            spatialDesign: { type: Type.STRING, description: "Design espacial e posicionamento dos elementos." },
+            frequencySpectrum: {
+                type: Type.OBJECT,
+                properties: {
+                    lowEnd: { type: Type.STRING, description: "Análise das frequências graves." },
+                    midRange: { type: Type.STRING, description: "Análise das frequências médias." },
+                    highEnd: { type: Type.STRING, description: "Análise das frequências agudas." }
+                },
+                required: ["lowEnd", "midRange", "highEnd"]
+            },
+            dynamicProcessing: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Processamento dinâmico aplicado." }
+        },
+        required: ["productionQuality", "mixingTechniques", "masteringApproach", "spatialDesign", "frequencySpectrum", "dynamicProcessing"]
+    }
   },
-  required: ["songInfo", "musicalElements", "composition", "soundEngineering", "lyricalAnalysis", "culturalContext"]
+  required: ["songInfo", "musicalElements", "composition", "soundEngineering", "lyricalAnalysis", "culturalContext", "genreAnalysis", "flowAnalysis", "popularityMetrics", "technicalAnalysis"]
 };
 
 
-export const analyzeMusic = async (youtubeUrl: string, apiKey: string): Promise<Analysis> => {
-    if (!apiKey) {
+/**
+ * Consolida dados de múltiplas fontes para análise musical profissional
+ */
+async function consolidateMusicData(
+  url: string,
+  youtubeApiKey: string,
+  lastfmApiKey: string
+): Promise<ConsolidatedMusicData | null> {
+  const youtubeService = new YouTubeService(youtubeApiKey);
+  const lastfmService = new LastFmService(lastfmApiKey);
+  const lyricsService = new LyricsService();
+
+  // Determinar tipo de URL e extrair dados
+  const urlType = youtubeService.getUrlType(url);
+
+  if (urlType === 'video') {
+    const videoId = youtubeService.extractVideoId(url);
+    if (!videoId) return null;
+
+    const youtubeData = await youtubeService.getVideoData(videoId);
+    if (!youtubeData) return null;
+
+    // Extrair título e artista do título do vídeo
+    const { title, artist } = extractTitleAndArtist(youtubeData.title);
+
+    // Obter dados do Last.fm
+    const lastfmTrackInfo = await lastfmService.getTrackInfo(artist, title);
+    const lastfmArtistInfo = await lastfmService.getArtistInfo(artist);
+    const popularityAnalysis = await lastfmService.getPopularityAnalysis(artist, title);
+
+    // Obter letras da música
+    const lyricsData = await lyricsService.getLyrics(artist, title, youtubeData.title);
+    const lyricsAnalysis = lyricsData.found ?
+      lyricsService.analyzeLyricsContent(lyricsData.lyrics) : null;
+
+    return {
+      title,
+      artist,
+      album: lastfmTrackInfo?.album,
+      duration: parseDuration(youtubeData.duration),
+      youtube: {
+        videoId: youtubeData.id,
+        channelTitle: youtubeData.channelTitle,
+        description: youtubeData.description,
+        viewCount: parseInt(youtubeData.viewCount),
+        likeCount: parseInt(youtubeData.likeCount),
+        publishedAt: youtubeData.publishedAt,
+        tags: youtubeData.tags,
+        categoryId: youtubeData.categoryId
+      },
+      lastfm: lastfmTrackInfo ? {
+        playcount: lastfmTrackInfo.playcount,
+        listeners: lastfmTrackInfo.listeners,
+        tags: lastfmTrackInfo.tags,
+        wiki: lastfmTrackInfo.wiki,
+        similar: lastfmTrackInfo.similar || [],
+        artistInfo: lastfmArtistInfo || undefined,
+        popularityAnalysis
+      } : undefined,
+      lyrics: lyricsData.found && lyricsAnalysis ? {
+        data: lyricsData,
+        analysis: lyricsAnalysis
+      } : undefined,
+      platform: 'youtube',
+      analysisTimestamp: new Date().toISOString()
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Extrai título e artista de títulos de vídeo do YouTube
+ */
+function extractTitleAndArtist(videoTitle: string): { title: string; artist: string } {
+  // Padrões comuns: "Artista - Título", "Artista: Título", "Título by Artista"
+  const patterns = [
+    /^(.+?)\s*[-–—]\s*(.+?)(?:\s*\(.*\))?(?:\s*\[.*\])?$/,
+    /^(.+?)\s*:\s*(.+?)(?:\s*\(.*\))?(?:\s*\[.*\])?$/,
+    /^(.+?)\s+by\s+(.+?)(?:\s*\(.*\))?(?:\s*\[.*\])?$/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = videoTitle.match(pattern);
+    if (match) {
+      return {
+        artist: match[1].trim(),
+        title: match[2].trim()
+      };
+    }
+  }
+
+  // Fallback: usar o título completo como título e tentar extrair artista do canal
+  return {
+    title: videoTitle.replace(/\s*\(.*\)|\s*\[.*\]/g, '').trim(),
+    artist: 'Unknown Artist'
+  };
+}
+
+/**
+ * Converte duração ISO 8601 para segundos
+ */
+function parseDuration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+
+  const hours = parseInt(match[1] || '0');
+  const minutes = parseInt(match[2] || '0');
+  const seconds = parseInt(match[3] || '0');
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * Cria prompt de análise musical de nível pós-doutorado
+ */
+function createAdvancedAnalysisPrompt(data: ConsolidatedMusicData): string {
+  const lastfmData = data.lastfm;
+  const youtubeData = data.youtube;
+  const lyricsData = data.lyrics;
+
+  return `
+# ANÁLISE MUSICAL ACADÊMICA AVANÇADA
+## Nível: Pós-Doutorado em Musicologia, Engenharia de Áudio e Composição
+
+Você é um consórcio de especialistas de elite mundial:
+- **Dr. Musicólogo**: PhD em Musicologia Histórica e Etnomusicologia (Harvard/Juilliard)
+- **Eng. de Som Master**: 30+ anos, Grammy winner, especialista em análise espectral
+- **Compositor Virtuoso**: Mestre em teoria musical avançada e análise harmônica
+- **Analista de Tendências**: Especialista em sociologia musical e impacto cultural
+
+---
+
+## DADOS CONSOLIDADOS PARA ANÁLISE
+
+### IDENTIFICAÇÃO MUSICAL
+- **Título**: "${data.title}"
+- **Artista**: "${data.artist}"
+- **Álbum**: ${data.album || 'N/A'}
+- **Duração**: ${Math.floor(data.duration / 60)}:${(data.duration % 60).toString().padStart(2, '0')}
+- **Plataforma**: ${data.platform}
+
+### DADOS YOUTUBE (Engagement & Distribuição)
+${youtubeData ? `
+- **Canal**: ${youtubeData.channelTitle}
+- **Visualizações**: ${youtubeData.viewCount.toLocaleString()}
+- **Likes**: ${youtubeData.likeCount.toLocaleString()}
+- **Data de Publicação**: ${new Date(youtubeData.publishedAt).toLocaleDateString()}
+- **Tags**: ${youtubeData.tags.slice(0, 10).join(', ')}
+- **Categoria**: ${youtubeData.categoryId}
+` : 'Dados não disponíveis'}
+
+### DADOS LAST.FM (Popularidade & Contexto Cultural)
+${lastfmData ? `
+- **Plays Globais**: ${lastfmData.playcount.toLocaleString()}
+- **Ouvintes Únicos**: ${lastfmData.listeners.toLocaleString()}
+- **Tags de Gênero**: ${lastfmData.tags.slice(0, 8).map(t => `${t.name} (${t.count})`).join(', ')}
+- **Popularidade Score**: ${lastfmData.popularityAnalysis.popularityScore}/100
+- **Impacto Cultural**: ${lastfmData.popularityAnalysis.culturalImpact}
+- **Status de Tendência**: ${lastfmData.popularityAnalysis.trendingStatus}
+${lastfmData.similar.length > 0 ? `- **Faixas Similares**: ${lastfmData.similar.slice(0, 3).map(s => `${s.name} - ${s.artist}`).join(', ')}` : ''}
+` : 'Dados não disponíveis'}
+
+### DADOS DE LETRAS (Análise Literária)
+${lyricsData ? `
+- **Letras Encontradas**: ✅ Sim (${lyricsData.data.wordCount} palavras, ${lyricsData.data.lineCount} linhas)
+- **Estrutura**: ${lyricsData.data.hasChorus ? 'Com refrão' : 'Sem refrão identificado'}
+- **Sentimento**: ${lyricsData.analysis.sentiment}
+- **Temas Principais**: ${lyricsData.analysis.themes.join(', ') || 'Não identificados'}
+- **Perspectiva Narrativa**: ${lyricsData.analysis.narrativePerspective}
+- **Tom Emocional**: ${lyricsData.analysis.emotionalTone.join(', ')}
+- **Vocabulário**: ${lyricsData.analysis.vocabulary}
+- **Dispositivos Literários**: ${lyricsData.analysis.literaryDevices.join(', ') || 'Não identificados'}
+- **Referências Culturais**: ${lyricsData.analysis.culturalReferences.join(', ') || 'Não identificadas'}
+- **Prévia das Letras**: "${lyricsData.data.lyrics.substring(0, 200)}${lyricsData.data.lyrics.length > 200 ? '...' : ''}"
+` : 'Letras não disponíveis - Análise baseada em elementos musicais'}
+
+---
+
+## INSTRUÇÕES DE ANÁLISE CRÍTICA
+
+### 1. ANÁLISE DE GÊNERO E ESTILO (Nível PhD)
+- Identifique o **gênero primário** com precisão acadêmica
+- Mapeie **subgêneros** e **micro-gêneros** específicos
+- Analise **influências cross-genre** e **fusões estilísticas**
+- Determine **evolução do gênero** e posicionamento histórico
+- Identifique **influências regionais/culturais** específicas
+
+### 2. ANÁLISE DE FLOW E RITMO (Engenharia de Precisão)
+- Avalie **complexidade rítmica** em escala técnica (1-10)
+- Analise **padrões de sincopação** e **deslocamentos métricos**
+- Identifique **groove patterns** característicos
+- Mapeie **variações rítmicas** ao longo da estrutura
+- Detecte **elementos polirrítmicos** e **cross-rhythms**
+
+### 3. ANÁLISE TÉCNICA DE PRODUÇÃO (Master Engineer Level)
+- Avalie **qualidade de produção** (1-10) com justificativa técnica
+- Identifique **técnicas de mixagem** específicas utilizadas
+- Analise **abordagem de masterização** e **processamento dinâmico**
+- Mapeie **design espacial** e **posicionamento estéreo**
+- Analise **espectro de frequências** (graves/médios/agudos) detalhadamente
+
+### 4. ANÁLISE LÍRICA E SEMÂNTICA (Nível Literário Acadêmico)
+${lyricsData ? `
+- Analise **conteúdo temático** e **narrativa** das letras fornecidas
+- Avalie **dispositivos literários** e **técnicas poéticas** utilizadas
+- Determine **tom emocional** e **perspectiva narrativa**
+- Identifique **referências culturais** e **contexto social**
+- Correlacione **letras com elementos musicais** (harmonia, ritmo, melodia)
+- Avalie **sofisticação vocabular** e **complexidade literária**
+` : `
+- Realize análise baseada em **conhecimento geral** sobre o artista e estilo
+- Estime **temas prováveis** baseado no gênero e contexto cultural
+- Avalie **características líricas típicas** do gênero/artista
+`}
+
+### 5. MÉTRICAS DE POPULARIDADE E IMPACTO
+- Calcule **popularidade global** baseada em dados consolidados
+- Analise **status de tendência** e **momentum cultural**
+- Avalie **apelo crossover** entre diferentes demografias
+- Determine **impacto cultural** com base em métricas objetivas
+
+---
+
+## FORMATO DE RESPOSTA OBRIGATÓRIO
+
+Responda EXCLUSIVAMENTE em formato JSON seguindo o schema fornecido.
+Cada campo deve ser preenchido com análise profunda e tecnicamente precisa.
+Use terminologia acadêmica apropriada para cada área de especialização.
+
+**CRÍTICO**: Esta análise deve refletir o nível de um paper acadêmico de pós-doutorado.
+Seja específico, técnico e fundamentado em dados quando disponível.
+`;
+}
+
+export const analyzeMusic = async (
+  url: string,
+  geminiApiKey: string,
+  youtubeApiKey: string,
+  lastfmApiKey: string
+): Promise<Analysis> => {
+    if (!geminiApiKey) {
         throw new Error("A chave de API da Gemini não foi fornecida.");
     }
 
-    // Validar se é uma URL válida do YouTube
-    if (!isValidYouTubeUrl(youtubeUrl)) {
-        throw new Error("Por favor, forneça uma URL válida do YouTube.");
+    if (!youtubeApiKey) {
+        throw new Error("A chave de API do YouTube não foi fornecida.");
     }
 
-    // Extrair o ID do vídeo
-    const videoId = extractYouTubeVideoId(youtubeUrl);
-    if (!videoId) {
-        throw new Error("Não foi possível extrair o ID do vídeo do YouTube da URL fornecida.");
+    if (!lastfmApiKey) {
+        throw new Error("A chave de API do Last.fm não foi fornecida.");
     }
 
-    // Obter informações do vídeo do YouTube
-    const videoInfo = await getYouTubeVideoInfo(videoId);
+    // Consolidar dados de múltiplas fontes
+    const consolidatedData = await consolidateMusicData(url, youtubeApiKey, lastfmApiKey);
 
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Construir informações do vídeo para o prompt
-    let videoInfoText = '';
-    if (videoInfo) {
-        videoInfoText = `
-**INFORMAÇÕES OBTIDAS DO VÍDEO:**
-- Título do vídeo: "${videoInfo.title}"
-- Canal/Artista: "${videoInfo.author_name}"`;
+    if (!consolidatedData) {
+        throw new Error("Não foi possível obter dados da música. Verifique se a URL é válida.");
     }
 
-    const prompt = `Sua função é atuar como um musicólogo acadêmico, engenheiro de som mestre e compositor virtuoso. Sua missão é realizar uma análise musical detalhada e profunda da música contida no vídeo do YouTube especificado.
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-**INFORMAÇÕES DO VÍDEO:**
-- URL completa: ${youtubeUrl}
-- ID do vídeo: ${videoId}
-- Link direto: https://www.youtube.com/watch?v=${videoId}${videoInfoText}
-
-**Instruções Críticas:**
-1.  **Identificação OBRIGATÓRIA**: ${videoInfo ? `Você DEVE analisar EXCLUSIVAMENTE a música "${videoInfo.title}" do artista/canal "${videoInfo.author_name}". Esta é a música correta que deve ser analisada.` : `Identifique EXATAMENTE o título e o artista da música do vídeo com ID "${videoId}".`}
-2.  **Verificação OBRIGATÓRIA**: ${videoInfo ? `CONFIRME que você está analisando "${videoInfo.title}" de "${videoInfo.author_name}" e NÃO qualquer outra música.` : `Certifique-se de que está analisando especificamente o vídeo com ID "${videoId}".`}
-3.  **Título e Artista CORRETOS**: ${videoInfo ? `No campo "title" use EXATAMENTE "${videoInfo.title.split(' - ')[1]?.split(' (')[0] || videoInfo.title}" e no campo "artist" use EXATAMENTE "${videoInfo.author_name}".` : `Use as informações corretas do vídeo especificado.`}
-4.  **Fonte de Análise**: Baseie sua análise em seu conhecimento sobre esta música específica identificada.
-5.  **Formato de Saída**: A resposta DEVE ser um objeto JSON único que adira estritamente ao esquema JSON fornecido.
-6.  **Falha na Análise**: Se você não conseguir identificar com certeza esta música específica ou não tiver informações suficientes sobre ela, **preencha o campo "error"** com a mensagem "Não foi possível identificar ou analisar a música especificada.". Neste caso, preencha os outros campos obrigatórios com valores padrão apropriados.
-
-**CRÍTICO**: ${videoInfo ? `A música a ser analisada é "${videoInfo.title}" de "${videoInfo.author_name}". NÃO analise nenhuma outra música. Se você analisar uma música diferente, isso será considerado um erro grave.` : `Analise especificamente o vídeo com ID "${videoId}".`}`;
+    // Criar prompt profissional de nível pós-doutorado
+    const prompt = createAdvancedAnalysisPrompt(consolidatedData);
 
   try {
     const response = await ai.models.generateContent({
@@ -198,8 +523,8 @@ export const analyzeMusic = async (youtubeUrl: string, apiKey: string): Promise<
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: analysisSchema,
-        temperature: 0.2,
+        responseSchema: advancedAnalysisSchema,
+        temperature: 0.1, // Menor temperatura para maior precisão técnica
       },
     });
 
@@ -235,4 +560,215 @@ export const analyzeMusic = async (youtubeUrl: string, apiKey: string): Promise<
     const errorMessage = error?.message || 'Erro desconhecido';
     throw new Error(`Falha ao obter a análise da API Gemini: ${errorMessage}. Verifique o console para mais detalhes.`);
   }
+};
+
+/**
+ * Analisa uma playlist completa do YouTube
+ */
+export const analyzePlaylist = async (
+  playlistUrl: string,
+  geminiApiKey: string,
+  youtubeApiKey: string,
+  lastfmApiKey: string,
+  maxTracks: number = 20
+): Promise<PlaylistAnalysis> => {
+  const youtubeService = new YouTubeService(youtubeApiKey);
+
+  // Extrair ID da playlist
+  const playlistId = youtubeService.extractPlaylistId(playlistUrl);
+  if (!playlistId) {
+    throw new Error("Não foi possível extrair o ID da playlist da URL fornecida.");
+  }
+
+  // Obter dados da playlist
+  const playlistData = await youtubeService.getPlaylistData(playlistId, maxTracks);
+  if (!playlistData) {
+    throw new Error("Não foi possível obter dados da playlist.");
+  }
+
+  // Analisar cada música da playlist
+  const trackAnalyses: Analysis[] = [];
+  const genreDistribution: { [genre: string]: number } = {};
+  let totalBPM = 0;
+  let validBPMCount = 0;
+
+  console.log(`Analisando ${playlistData.videos.length} músicas da playlist...`);
+
+  for (let i = 0; i < playlistData.videos.length; i++) {
+    const video = playlistData.videos[i];
+    console.log(`Analisando ${i + 1}/${playlistData.videos.length}: ${video.title}`);
+
+    try {
+      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
+      const analysis = await analyzeMusic(videoUrl, geminiApiKey, youtubeApiKey, lastfmApiKey);
+
+      trackAnalyses.push(analysis);
+
+      // Coletar dados para análise geral
+      if (analysis.genreAnalysis?.primaryGenre) {
+        genreDistribution[analysis.genreAnalysis.primaryGenre] =
+          (genreDistribution[analysis.genreAnalysis.primaryGenre] || 0) + 1;
+      }
+
+      if (analysis.musicalElements?.bpm && analysis.musicalElements.bpm > 0) {
+        totalBPM += analysis.musicalElements.bpm;
+        validBPMCount++;
+      }
+
+      // Pequena pausa para respeitar rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+    } catch (error) {
+      console.error(`Erro ao analisar ${video.title}:`, error);
+      // Continuar com as outras músicas mesmo se uma falhar
+    }
+  }
+
+  // Calcular métricas gerais
+  const averageBPM = validBPMCount > 0 ? Math.round(totalBPM / validBPMCount) : 0;
+
+  // Determinar gêneros dominantes
+  const dominantGenres = Object.entries(genreDistribution)
+    .map(([genre, count]) => ({
+      genre,
+      percentage: Math.round((count / trackAnalyses.length) * 100)
+    }))
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 5);
+
+  // Calcular score de coesão baseado na diversidade de gêneros
+  const genreCount = Object.keys(genreDistribution).length;
+  const cohesionScore = Math.max(0, 100 - (genreCount * 10)); // Menos gêneros = mais coesão
+
+  // Calcular duração total
+  const totalDurationSeconds = playlistData.videos.reduce((sum, video) => {
+    return sum + parseDuration(video.duration);
+  }, 0);
+
+  const hours = Math.floor(totalDurationSeconds / 3600);
+  const minutes = Math.floor((totalDurationSeconds % 3600) / 60);
+  const totalDuration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+  return {
+    playlistInfo: {
+      title: playlistData.title,
+      totalTracks: trackAnalyses.length,
+      totalDuration,
+      curator: playlistData.channelTitle
+    },
+    overallAnalysis: {
+      dominantGenres,
+      averageBPM,
+      moodProgression: analyzeMoodProgression(trackAnalyses),
+      energyFlow: analyzeEnergyFlow(trackAnalyses),
+      cohesionScore
+    },
+    trackAnalyses,
+    playlistInsights: {
+      genreDistribution,
+      temporalFlow: analyzeTemporalFlow(trackAnalyses),
+      emotionalJourney: analyzeEmotionalJourney(trackAnalyses),
+      recommendedListeningContext: generateListeningRecommendations(trackAnalyses, dominantGenres)
+    }
+  };
+};
+
+/**
+ * Analisa a progressão de humor ao longo da playlist
+ */
+function analyzeMoodProgression(analyses: Analysis[]): string {
+  if (analyses.length === 0) return "Não foi possível determinar";
+
+  const moods = analyses.map(a => a.musicalElements?.mood || []).flat();
+  const moodCounts = moods.reduce((acc, mood) => {
+    acc[mood] = (acc[mood] || 0) + 1;
+    return acc;
+  }, {} as { [mood: string]: number });
+
+  const dominantMood = Object.entries(moodCounts)
+    .sort(([,a], [,b]) => b - a)[0]?.[0] || "variado";
+
+  return `Progressão predominantemente ${dominantMood} com variações ao longo da playlist`;
+}
+
+/**
+ * Analisa o fluxo de energia da playlist
+ */
+function analyzeEnergyFlow(analyses: Analysis[]): string {
+  if (analyses.length === 0) return "Não foi possível determinar";
+
+  const bpms = analyses
+    .map(a => a.musicalElements?.bpm)
+    .filter(bpm => bpm && bpm > 0) as number[];
+
+  if (bpms.length < 2) return "Fluxo de energia estável";
+
+  const start = bpms.slice(0, Math.ceil(bpms.length / 3)).reduce((a, b) => a + b, 0) / Math.ceil(bpms.length / 3);
+  const end = bpms.slice(-Math.ceil(bpms.length / 3)).reduce((a, b) => a + b, 0) / Math.ceil(bpms.length / 3);
+
+  const difference = end - start;
+
+  if (difference > 10) return "Energia crescente ao longo da playlist";
+  if (difference < -10) return "Energia decrescente, ideal para relaxamento";
+  return "Energia equilibrada e consistente";
+}
+
+/**
+ * Analisa o fluxo temporal da playlist
+ */
+function analyzeTemporalFlow(analyses: Analysis[]): string {
+  const tempos = analyses.map(a => a.musicalElements?.tempoDescription).filter(Boolean);
+  const uniqueTempos = [...new Set(tempos)];
+
+  if (uniqueTempos.length <= 2) return "Fluxo temporal consistente";
+  if (uniqueTempos.length <= 4) return "Variação temporal moderada";
+  return "Grande diversidade temporal";
+}
+
+/**
+ * Analisa a jornada emocional da playlist
+ */
+function analyzeEmotionalJourney(analyses: Analysis[]): string {
+  const themes = analyses.map(a => a.lyricalAnalysis?.theme).filter(Boolean);
+  const uniqueThemes = [...new Set(themes)];
+
+  if (uniqueThemes.length <= 2) return "Jornada emocional focada e coesa";
+  if (uniqueThemes.length <= 4) return "Exploração emocional variada";
+  return "Ampla gama de experiências emocionais";
+}
+
+/**
+ * Gera recomendações de contexto de escuta
+ */
+function generateListeningRecommendations(
+  analyses: Analysis[],
+  dominantGenres: Array<{ genre: string; percentage: number }>
+): string[] {
+  const recommendations: string[] = [];
+
+  // Baseado nos gêneros dominantes
+  const topGenre = dominantGenres[0]?.genre.toLowerCase() || "";
+
+  if (topGenre.includes("rock") || topGenre.includes("metal")) {
+    recommendations.push("Treino intenso", "Dirigindo", "Concentração para trabalho");
+  } else if (topGenre.includes("jazz") || topGenre.includes("blues")) {
+    recommendations.push("Jantar romântico", "Leitura", "Trabalho criativo");
+  } else if (topGenre.includes("electronic") || topGenre.includes("dance")) {
+    recommendations.push("Festa", "Exercícios", "Limpeza da casa");
+  } else if (topGenre.includes("classical") || topGenre.includes("ambient")) {
+    recommendations.push("Meditação", "Estudo", "Relaxamento");
+  } else if (topGenre.includes("pop")) {
+    recommendations.push("Viagem de carro", "Atividades sociais", "Background casual");
+  }
+
+  // Baseado na energia média
+  const avgBPM = analyses.reduce((sum, a) => sum + (a.musicalElements?.bpm || 0), 0) / analyses.length;
+
+  if (avgBPM > 140) {
+    recommendations.push("Exercícios de alta intensidade");
+  } else if (avgBPM < 80) {
+    recommendations.push("Relaxamento noturno");
+  }
+
+  return [...new Set(recommendations)].slice(0, 4);
 };

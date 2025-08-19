@@ -6,6 +6,7 @@ interface URLInputProps {
   setUrl: (url: string) => void;
   onAnalyze: () => void;
   isLoading: boolean;
+  isPlaylist?: boolean;
 }
 
 // Função para validar URL do YouTube
@@ -14,7 +15,7 @@ const isValidYouTubeUrl = (url: string): boolean => {
   return youtubeRegex.test(url);
 };
 
-export const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onAnalyze, isLoading }) => {
+export const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onAnalyze, isLoading, isPlaylist }) => {
   const [urlError, setUrlError] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,6 +63,25 @@ export const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onAnalyze, isLo
           />
           {urlError && (
             <p className="text-red-400 text-sm mt-1">{urlError}</p>
+          )}
+          {url && !urlError && (
+            <div className="flex items-center mt-2 text-sm">
+              {isPlaylist ? (
+                <span className="flex items-center text-purple-400">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  </svg>
+                  📋 Playlist detectada - Analisará múltiplas músicas
+                </span>
+              ) : (
+                <span className="flex items-center text-green-400">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.369 4.369 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/>
+                  </svg>
+                  🎵 Vídeo individual detectado
+                </span>
+              )}
+            </div>
           )}
         </div>
         <button

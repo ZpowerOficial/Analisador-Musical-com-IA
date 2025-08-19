@@ -41,7 +41,18 @@ const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis, youtubeUrl }) => {
   const [isCopied, setIsCopied] = useState(false);
-  const { songInfo, musicalElements, composition, soundEngineering, lyricalAnalysis, culturalContext } = analysis;
+  const {
+    songInfo,
+    musicalElements,
+    composition,
+    soundEngineering,
+    lyricalAnalysis,
+    culturalContext,
+    genreAnalysis,
+    flowAnalysis,
+    popularityMetrics,
+    technicalAnalysis
+  } = analysis;
 
   // Função para extrair ID do vídeo da URL
   const extractVideoId = (url: string): string | null => {
@@ -62,7 +73,65 @@ export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis, yout
   const videoId = youtubeUrl ? extractVideoId(youtubeUrl) : null;
 
   const handleCopy = useCallback(() => {
-    const promptText = `Gere uma nova música com as seguintes características acadêmicas e técnicas:
+    const promptText = `# ANÁLISE MUSICAL PROFISSIONAL COMPLETA
+
+## Identificação Musical
+- **Título**: ${songInfo.title}
+- **Artista**: ${songInfo.artist}
+- **Ano**: ${songInfo.year}
+- **Gênero Principal**: ${songInfo.mainGenre}
+- **Subgêneros**: ${songInfo.subgenres.join(', ')}
+
+## Elementos Musicais Fundamentais
+- **BPM**: ${musicalElements.bpm} (${musicalElements.tempoDescription})
+- **Tonalidade**: ${musicalElements.key}
+- **Modo**: ${musicalElements.mode}
+- **Fórmula de Compasso**: ${musicalElements.timeSignature}
+- **Atmosfera**: ${musicalElements.mood.join(', ')}
+- **Caráter Tonal**: ${musicalElements.tonality}
+
+## Análise de Gênero Avançada
+${analysis.genreAnalysis ? `
+- **Gênero Primário**: ${analysis.genreAnalysis.primaryGenre}
+- **Subgêneros Específicos**: ${analysis.genreAnalysis.subgenres.join(', ')}
+- **Confiança na Classificação**: ${analysis.genreAnalysis.genreConfidence}%
+- **Influências Cross-Genre**: ${analysis.genreAnalysis.crossGenreInfluences.join(', ')}
+- **Evolução do Gênero**: ${analysis.genreAnalysis.genreEvolution}
+- **Influências Regionais**: ${analysis.genreAnalysis.regionalInfluences.join(', ')}
+` : ''}
+
+## Análise de Flow e Ritmo
+${analysis.flowAnalysis ? `
+- **Flow Geral**: ${analysis.flowAnalysis.overallFlow}
+- **Complexidade Rítmica**: ${analysis.flowAnalysis.rhythmicComplexity}/10
+- **Nível de Sincopação**: ${analysis.flowAnalysis.syncopationLevel}/10
+- **Padrão de Groove**: ${analysis.flowAnalysis.groovePattern}
+- **Variações Rítmicas**: ${analysis.flowAnalysis.rhythmicVariations.join(', ')}
+- **Elementos Polirrítmicos**: ${analysis.flowAnalysis.polyrhythmicElements.join(', ')}
+` : ''}
+
+## Métricas de Popularidade
+${analysis.popularityMetrics ? `
+- **Popularidade Global**: ${analysis.popularityMetrics.globalPopularity}/100
+- **Status de Tendência**: ${analysis.popularityMetrics.trendingStatus}
+- **Impacto Cultural**: ${analysis.popularityMetrics.culturalImpact}
+- **Apelo Crossover**: ${analysis.popularityMetrics.crossoverAppeal}/100
+` : ''}
+
+## Análise Técnica de Produção
+${analysis.technicalAnalysis ? `
+- **Qualidade de Produção**: ${analysis.technicalAnalysis.productionQuality}/10
+- **Técnicas de Mixagem**: ${analysis.technicalAnalysis.mixingTechniques.join(', ')}
+- **Abordagem de Masterização**: ${analysis.technicalAnalysis.masteringApproach}
+- **Design Espacial**: ${analysis.technicalAnalysis.spatialDesign}
+- **Espectro de Frequências**:
+  - Graves: ${analysis.technicalAnalysis.frequencySpectrum.lowEnd}
+  - Médios: ${analysis.technicalAnalysis.frequencySpectrum.midRange}
+  - Agudos: ${analysis.technicalAnalysis.frequencySpectrum.highEnd}
+- **Processamento Dinâmico**: ${analysis.technicalAnalysis.dynamicProcessing.join(', ')}
+` : ''}
+
+## Blueprint de Composição
 
 ### Identidade Sonora
 - **Gênero Principal:** ${songInfo.mainGenre}
@@ -115,6 +184,19 @@ ${soundEngineering.instrumentation.map(i => `- ${i.instrument}: ${i.performanceA
           <div className="space-y-2 text-sm text-slate-300">
             <div><span className="text-slate-400">ID do Vídeo:</span> <code className="bg-slate-700 px-2 py-1 rounded text-cyan-300">{videoId}</code></div>
             <div><span className="text-slate-400">URL:</span> <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">{youtubeUrl}</a></div>
+          </div>
+        </div>
+      )}
+
+      {/* Lyrics Info */}
+      {analysis.lyricalAnalysis && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-green-400 mb-2">📝 Letras Analisadas</h3>
+          <div className="space-y-2 text-sm text-slate-300">
+            <div><span className="text-slate-400">Status:</span> <span className="text-green-400">✅ Letras encontradas e analisadas</span></div>
+            <div><span className="text-slate-400">Tema Principal:</span> <span className="text-cyan-300">{analysis.lyricalAnalysis.theme}</span></div>
+            <div><span className="text-slate-400">Tom Emocional:</span> <span className="text-purple-300">{analysis.lyricalAnalysis.emotionalTone}</span></div>
+            <div><span className="text-slate-400">Perspectiva:</span> <span className="text-yellow-300">{analysis.lyricalAnalysis.narrativePerspective}</span></div>
           </div>
         </div>
       )}
@@ -221,6 +303,76 @@ ${soundEngineering.instrumentation.map(i => `- ${i.instrument}: ${i.performanceA
           <DetailItem label="Impacto e Legado">{culturalContext.impact}</DetailItem>
         </dl>
       </AnalysisCard>
+
+      {/* Genre Analysis */}
+      {genreAnalysis && (
+        <AnalysisCard title="Análise de Gênero Avançada" icon={<span className="w-6 h-6 mr-3 text-cyan-400">🎭</span>}>
+          <dl className="space-y-4">
+            <DetailItem label="Gênero Primário">{genreAnalysis.primaryGenre}</DetailItem>
+            <DetailItem label="Confiança na Classificação">{genreAnalysis.genreConfidence}%</DetailItem>
+            <DetailItem label="Subgêneros Específicos">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {genreAnalysis.subgenres.map((genre, i) => <Pill key={i}>{genre}</Pill>)}
+              </div>
+            </DetailItem>
+            <DetailItem label="Influências Cross-Genre">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {genreAnalysis.crossGenreInfluences.map((influence, i) => <Pill key={i}>{influence}</Pill>)}
+              </div>
+            </DetailItem>
+            <DetailItem label="Evolução do Gênero">{genreAnalysis.genreEvolution}</DetailItem>
+            <DetailItem label="Influências Regionais">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {genreAnalysis.regionalInfluences.map((region, i) => <Pill key={i}>{region}</Pill>)}
+              </div>
+            </DetailItem>
+          </dl>
+        </AnalysisCard>
+      )}
+
+      {/* Flow Analysis */}
+      {flowAnalysis && (
+        <AnalysisCard title="Análise de Flow e Ritmo" icon={<span className="w-6 h-6 mr-3 text-cyan-400">🌊</span>}>
+          <dl className="space-y-4">
+            <DetailItem label="Flow Geral">{flowAnalysis.overallFlow}</DetailItem>
+            <div className="grid grid-cols-2 gap-4">
+              <DetailItem label="Complexidade Rítmica">
+                <div className="flex items-center">
+                  <div className="w-full bg-slate-700 rounded-full h-2 mr-2">
+                    <div
+                      className="bg-cyan-500 h-2 rounded-full"
+                      style={{ width: `${(flowAnalysis.rhythmicComplexity / 10) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-sm">{flowAnalysis.rhythmicComplexity}/10</span>
+                </div>
+              </DetailItem>
+              <DetailItem label="Nível de Sincopação">
+                <div className="flex items-center">
+                  <div className="w-full bg-slate-700 rounded-full h-2 mr-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full"
+                      style={{ width: `${(flowAnalysis.syncopationLevel / 10) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-sm">{flowAnalysis.syncopationLevel}/10</span>
+                </div>
+              </DetailItem>
+            </div>
+            <DetailItem label="Padrão de Groove">{flowAnalysis.groovePattern}</DetailItem>
+            <DetailItem label="Variações Rítmicas">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {flowAnalysis.rhythmicVariations.map((variation, i) => <Pill key={i}>{variation}</Pill>)}
+              </div>
+            </DetailItem>
+            <DetailItem label="Elementos Polirrítmicos">
+              <div className="flex flex-wrap gap-2 mt-1">
+                {flowAnalysis.polyrhythmicElements.map((element, i) => <Pill key={i}>{element}</Pill>)}
+              </div>
+            </DetailItem>
+          </dl>
+        </AnalysisCard>
+      )}
 
     </div>
   );

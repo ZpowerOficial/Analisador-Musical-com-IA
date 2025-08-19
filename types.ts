@@ -67,4 +67,71 @@ export interface Analysis {
   soundEngineering: SoundEngineering;
   lyricalAnalysis: LyricalAnalysis;
   culturalContext: CulturalContext;
+  // Novos campos para análise avançada
+  genreAnalysis?: GenreAnalysis;
+  flowAnalysis?: FlowAnalysis;
+  popularityMetrics?: PopularityMetrics;
+  technicalAnalysis?: TechnicalAnalysis;
+}
+
+export interface GenreAnalysis {
+  primaryGenre: string;
+  subgenres: string[];
+  genreConfidence: number; // 0-100
+  crossGenreInfluences: string[];
+  genreEvolution: string;
+  regionalInfluences: string[];
+}
+
+export interface FlowAnalysis {
+  overallFlow: string;
+  rhythmicComplexity: number; // 1-10
+  syncopationLevel: number; // 1-10
+  groovePattern: string;
+  rhythmicVariations: string[];
+  polyrhythmicElements: string[];
+}
+
+export interface PopularityMetrics {
+  globalPopularity: number; // 0-100
+  regionalPopularity: string; // Descrição da popularidade regional
+  trendingStatus: 'rising' | 'stable' | 'declining' | 'viral' | 'classic';
+  culturalImpact: 'minimal' | 'moderate' | 'significant' | 'revolutionary';
+  crossoverAppeal: number; // 0-100
+}
+
+export interface TechnicalAnalysis {
+  productionQuality: number; // 1-10
+  mixingTechniques: string[];
+  masteringApproach: string;
+  spatialDesign: string;
+  frequencySpectrum: {
+    lowEnd: string;
+    midRange: string;
+    highEnd: string;
+  };
+  dynamicProcessing: string[];
+}
+
+export interface PlaylistAnalysis {
+  playlistInfo: {
+    title: string;
+    totalTracks: number;
+    totalDuration: string;
+    curator: string;
+  };
+  overallAnalysis: {
+    dominantGenres: Array<{ genre: string; percentage: number }>;
+    averageBPM: number;
+    moodProgression: string;
+    energyFlow: string;
+    cohesionScore: number; // 0-100
+  };
+  trackAnalyses: Analysis[];
+  playlistInsights: {
+    genreDistribution: { [genre: string]: number };
+    temporalFlow: string;
+    emotionalJourney: string;
+    recommendedListeningContext: string[];
+  };
 }

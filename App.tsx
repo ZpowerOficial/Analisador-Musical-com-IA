@@ -4,19 +4,39 @@ import { Header } from './components/Header';
 import { URLInput } from './components/URLInput';
 import { AnalysisDisplay } from './components/AnalysisDisplay';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { analyzeMusic } from './services/geminiService';
+import { analyzeMusic, analyzePlaylist } from './services/geminiService';
+import YouTubeService from './services/youtube.service';
 import type { Analysis } from './types';
 
 const App: React.FC = () => {
   const [youtubeUrl, setYoutubeUrl] = useState<string>('');
-  const [apiKey, setApiKey] = useState<string>('');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
 
+  // Chaves de API fixas (você forneceu)
+  const YOUTUBE_API_KEY = 'AIzaSyCGnihQFuSZmND5hmpenx5JJ4oFzESdF_A';
+  const LASTFM_API_KEY = 'a487c56233d573692d97f55b73506d12';
+
+
+  // Detectar se é playlist ou vídeo individual
+  const detectUrlType = useCallback((url: string) => {
+    const youtubeService = new YouTubeService(YOUTUBE_API_KEY);
+    const urlType = youtubeService.getUrlType(url);
+    setIsPlaylist(urlType === 'playlist');
+  }, [YOUTUBE_API_KEY]);
+
+  // Atualizar detecção quando URL muda
+  React.useEffect(() => {
+    if (youtubeUrl.trim()) {
+      detectUrlType(youtubeUrl);
+    }
+  }, [youtubeUrl, detectUrlType]);
 
   const handleAnalyze = useCallback(async () => {
-    if (!apiKey.trim()) {
+    if (!geminiApiKey.trim()) {
       setError('Por favor, insira sua chave de API da Gemini.');
       return;
     }
@@ -24,17 +44,44 @@ const App: React.FC = () => {
       setError('Por favor, insira um URL do YouTube.');
       return;
     }
+
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
 
     try {
-      const result = await analyzeMusic(youtubeUrl, apiKey);
-      if (result.error) {
-        setError(result.error);
-        setAnalysis(null);
+      if (isPlaylist) {
+        // Análise de playlist
+        const playlistResult = await analyzePlaylist(
+          youtubeUrl,
+          geminiApiKey,
+          YOUTUBE_API_KEY,
+          LASTFM_API_KEY,
+          10 // Máximo 10 músicas para não exceder limites
+        );
+
+        // Para compatibilidade, usar a primeira análise como resultado principal
+        if (playlistResult.trackAnalyses.length > 0) {
+          setAnalysis(playlistResult.trackAnalyses[0]);
+          console.log('Análise completa da playlist:', playlistResult);
+        } else {
+          setError('Não foi possível analisar nenhuma música da playlist.');
+        }
       } else {
-        setAnalysis(result);
+        // Análise de música individual
+        const result = await analyzeMusic(
+          youtubeUrl,
+          geminiApiKey,
+          YOUTUBE_API_KEY,
+          LASTFM_API_KEY
+        );
+
+        if (result.error) {
+          setError(result.error);
+          setAnalysis(null);
+        } else {
+          setAnalysis(result);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -46,7 +93,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [youtubeUrl, apiKey]);
+  }, [youtubeUrl, geminiApiKey, isPlaylist, YOUTUBE_API_KEY, LASTFM_API_KEY]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
@@ -64,8 +111,8 @@ const App: React.FC = () => {
             <input
               id="api-key"
               type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              value={geminiApiKey}
+              onChange={(e) => setGeminiApiKey(e.target.value)}
               placeholder="Cole sua chave de API aqui"
               disabled={isLoading}
               className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 placeholder-slate-500 disabled:opacity-50"
@@ -95,6 +142,7 @@ const App: React.FC = () => {
             setUrl={setYoutubeUrl}
             onAnalyze={handleAnalyze}
             isLoading={isLoading}
+            isPlaylist={isPlaylist}
           />
         </div>
 
