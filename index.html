@@ -2,11 +2,23 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-," />
+    <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analisador Musical com IA</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Suprimir aviso do Tailwind CDN em desenvolvimento
+      if (typeof console !== 'undefined') {
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          if (args[0] && args[0].includes && args[0].includes('should not be used in production')) {
+            return;
+          }
+          originalWarn.apply(console, args);
+        };
+      }
+    </script>
     <style>
       /* Custom scrollbar for a more modern look */
       ::-webkit-scrollbar {
@@ -33,6 +45,7 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-slate-900">
     <div id="root"></div>

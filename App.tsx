@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { URLInput } from './components/URLInput';
@@ -12,6 +13,7 @@ const App: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
 
   const handleAnalyze = useCallback(async () => {
     if (!apiKey.trim()) {
@@ -74,6 +76,18 @@ const App: React.FC = () => {
                 Obtenha sua chave aqui.
               </a>
             </p>
+            <details className="mt-3 text-xs text-slate-500">
+              <summary className="cursor-pointer hover:text-slate-400">💡 Problemas com a API? Clique aqui para ajuda</summary>
+              <div className="mt-2 p-3 bg-slate-800/50 rounded border border-slate-700 space-y-2">
+                <p><strong>Se você receber erro de "SERVICE_DISABLED":</strong></p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Acesse o Google Cloud Console</li>
+                  <li>Habilite a "Generative Language API"</li>
+                  <li>Aguarde alguns minutos para a ativação</li>
+                  <li>Tente novamente</li>
+                </ol>
+              </div>
+            </details>
           </div>
 
           <URLInput
@@ -92,7 +106,7 @@ const App: React.FC = () => {
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-          {analysis && <AnalysisDisplay analysis={analysis} />}
+          {analysis && <AnalysisDisplay analysis={analysis} youtubeUrl={youtubeUrl} />}
         </div>
       </main>
       <footer className="text-center py-6 text-slate-500 text-sm">

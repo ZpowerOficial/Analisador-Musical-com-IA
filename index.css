@@ -1,0 +1,83 @@
+/* Estilos personalizados para o Analisador Musical */
+
+/* Animações personalizadas */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+/* Estilos para scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b; /* slate-800 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569; /* slate-600 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* slate-500 */
+}
+
+/* Estilos para melhor legibilidade */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Estilos para código */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Estilos para links */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Estilos para botões com foco */
+button:focus {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+
+/* Estilos para inputs com foco */
+input:focus {
+  outline: none;
+}
+
+/* Transições suaves */
+* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Estilos para seleção de texto */
+::selection {
+  background-color: #06b6d4;
+  color: white;
+}
+
+::-moz-selection {
+  background-color: #06b6d4;
+  color: white;
+}

@@ -1,5 +1,50 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Analysis } from '../types';
+
+// Função para extrair o ID do vídeo do YouTube
+const extractYouTubeVideoId = (url: string): string | null => {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
+    /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+  return null;
+};
+
+// Função para validar se é uma URL válida do YouTube
+const isValidYouTubeUrl = (url: string): boolean => {
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+  return youtubeRegex.test(url);
+};
+
+// Função para obter informações do vídeo do YouTube (usando oEmbed - não requer API key)
+const getYouTubeVideoInfo = async (videoId: string): Promise<{title: string, author_name: string} | null> => {
+  try {
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const response = await fetch(oembedUrl);
+
+    if (!response.ok) {
+      console.warn('Falha ao obter informações do vídeo via oEmbed');
+      return null;
+    }
+
+    const data = await response.json();
+    return {
+      title: data.title || '',
+      author_name: data.author_name || ''
+    };
+  } catch (error) {
+    console.warn('Erro ao obter informações do vídeo:', error);
+    return null;
+  }
+};
 
 const analysisSchema = {
   type: Type.OBJECT,
@@ -104,17 +149,48 @@ export const analyzeMusic = async (youtubeUrl: string, apiKey: string): Promise<
     if (!apiKey) {
         throw new Error("A chave de API da Gemini não foi fornecida.");
     }
+
+    // Validar se é uma URL válida do YouTube
+    if (!isValidYouTubeUrl(youtubeUrl)) {
+        throw new Error("Por favor, forneça uma URL válida do YouTube.");
+    }
+
+    // Extrair o ID do vídeo
+    const videoId = extractYouTubeVideoId(youtubeUrl);
+    if (!videoId) {
+        throw new Error("Não foi possível extrair o ID do vídeo do YouTube da URL fornecida.");
+    }
+
+    // Obter informações do vídeo do YouTube
+    const videoInfo = await getYouTubeVideoInfo(videoId);
+
     const ai = new GoogleGenAI({ apiKey });
 
-    const prompt = `Sua função é atuar como um musicólogo acadêmico, engenheiro de som mestre e compositor virtuoso. Sua missão é realizar uma análise musical detalhada e profunda da música contida no link do YouTube fornecido.
+    // Construir informações do vídeo para o prompt
+    let videoInfoText = '';
+    if (videoInfo) {
+        videoInfoText = `
+**INFORMAÇÕES OBTIDAS DO VÍDEO:**
+- Título do vídeo: "${videoInfo.title}"
+- Canal/Artista: "${videoInfo.author_name}"`;
+    }
+
+    const prompt = `Sua função é atuar como um musicólogo acadêmico, engenheiro de som mestre e compositor virtuoso. Sua missão é realizar uma análise musical detalhada e profunda da música contida no vídeo do YouTube especificado.
+
+**INFORMAÇÕES DO VÍDEO:**
+- URL completa: ${youtubeUrl}
+- ID do vídeo: ${videoId}
+- Link direto: https://www.youtube.com/watch?v=${videoId}${videoInfoText}
 
 **Instruções Críticas:**
-1.  **Identificação**: Primeiro, identifique o título e o artista da música a partir do link ou título do vídeo do YouTube. Se não conseguir identificar a música com certeza, retorne um erro.
-2.  **Fonte de Análise**: Baseie sua análise em seu vasto conhecimento sobre esta música específica. Analise a composição, produção e contexto cultural como se estivesse consultando uma enciclopédia musical completa.
-3.  **Formato de Saída**: A resposta DEVE ser um objeto JSON único que adira estritamente ao esquema JSON fornecido.
-4.  **Falha na Análise**: Se você não conseguir identificar a música no link ou não tiver informações suficientes sobre ela para realizar uma análise detalhada, **preencha o campo "error"** com a mensagem "Não foi possível identificar ou analisar a música do link fornecido.". Neste caso, preencha os outros campos obrigatórios com valores padrão apropriados (ex: "N/A" para strings, 0 para números, e arrays vazios [] para listas).
+1.  **Identificação OBRIGATÓRIA**: ${videoInfo ? `Você DEVE analisar EXCLUSIVAMENTE a música "${videoInfo.title}" do artista/canal "${videoInfo.author_name}". Esta é a música correta que deve ser analisada.` : `Identifique EXATAMENTE o título e o artista da música do vídeo com ID "${videoId}".`}
+2.  **Verificação OBRIGATÓRIA**: ${videoInfo ? `CONFIRME que você está analisando "${videoInfo.title}" de "${videoInfo.author_name}" e NÃO qualquer outra música.` : `Certifique-se de que está analisando especificamente o vídeo com ID "${videoId}".`}
+3.  **Título e Artista CORRETOS**: ${videoInfo ? `No campo "title" use EXATAMENTE "${videoInfo.title.split(' - ')[1]?.split(' (')[0] || videoInfo.title}" e no campo "artist" use EXATAMENTE "${videoInfo.author_name}".` : `Use as informações corretas do vídeo especificado.`}
+4.  **Fonte de Análise**: Baseie sua análise em seu conhecimento sobre esta música específica identificada.
+5.  **Formato de Saída**: A resposta DEVE ser um objeto JSON único que adira estritamente ao esquema JSON fornecido.
+6.  **Falha na Análise**: Se você não conseguir identificar com certeza esta música específica ou não tiver informações suficientes sobre ela, **preencha o campo "error"** com a mensagem "Não foi possível identificar ou analisar a música especificada.". Neste caso, preencha os outros campos obrigatórios com valores padrão apropriados.
 
-O link para análise é: ${youtubeUrl}`;
+**CRÍTICO**: ${videoInfo ? `A música a ser analisada é "${videoInfo.title}" de "${videoInfo.author_name}". NÃO analise nenhuma outra música. Se você analisar uma música diferente, isso será considerado um erro grave.` : `Analise especificamente o vídeo com ID "${videoId}".`}`;
 
   try {
     const response = await ai.models.generateContent({
@@ -133,12 +209,30 @@ O link para análise é: ${youtubeUrl}`;
 
   } catch (error) {
     console.error("Error calling Gemini API:", error);
-    if (error?.message?.includes('API key not valid')) {
+
+    // Tratamento específico para diferentes tipos de erro
+    if (error?.message?.includes('API key not valid') || error?.message?.includes('INVALID_ARGUMENT')) {
       throw new Error('A chave de API fornecida é inválida. Verifique se a chave está correta e tente novamente.');
     }
-    if (error?.message?.includes('xhr error')) {
-      throw new Error('Erro de rede ao contatar a API Gemini. Isso pode ser um problema de CORS ou uma restrição na sua chave de API. Verifique as configurações da sua chave no Google Cloud Console.');
+
+    if (error?.message?.includes('SERVICE_DISABLED') || error?.message?.includes('PERMISSION_DENIED')) {
+      throw new Error('A API Generative Language não está habilitada no seu projeto Google Cloud. Acesse https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview e habilite a API, depois aguarde alguns minutos antes de tentar novamente.');
     }
-    throw new Error("Falha ao obter a análise da API Gemini. Verifique o console para mais detalhes.");
+
+    if (error?.message?.includes('QUOTA_EXCEEDED')) {
+      throw new Error('Cota da API Gemini excedida. Verifique os limites da sua chave de API no Google Cloud Console.');
+    }
+
+    if (error?.message?.includes('xhr error') || error?.message?.includes('CORS')) {
+      throw new Error('Erro de rede ao contatar a API Gemini. Isso pode ser um problema de CORS ou conectividade. Verifique sua conexão com a internet.');
+    }
+
+    if (error?.message?.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error('Recursos da API temporariamente esgotados. Tente novamente em alguns minutos.');
+    }
+
+    // Erro genérico com mais informações
+    const errorMessage = error?.message || 'Erro desconhecido';
+    throw new Error(`Falha ao obter a análise da API Gemini: ${errorMessage}. Verifique o console para mais detalhes.`);
   }
 };

@@ -11,6 +11,7 @@ import { CheckIcon } from './icons/CheckIcon';
 
 interface AnalysisDisplayProps {
   analysis: Analysis;
+  youtubeUrl?: string;
 }
 
 const AnalysisCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
@@ -38,9 +39,27 @@ const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     </span>
 );
 
-export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis }) => {
+export const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({ analysis, youtubeUrl }) => {
   const [isCopied, setIsCopied] = useState(false);
   const { songInfo, musicalElements, composition, soundEngineering, lyricalAnalysis, culturalContext } = analysis;
+
+  // Função para extrair ID do vídeo da URL
+  const extractVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    return null;
+  };
+
+  const videoId = youtubeUrl ? extractVideoId(youtubeUrl) : null;
 
   const handleCopy = useCallback(() => {
     const promptText = `Gere uma nova música com as seguintes características acadêmicas e técnicas:
@@ -89,6 +108,17 @@ ${soundEngineering.instrumentation.map(i => `- ${i.instrument}: ${i.performanceA
 
   return (
     <div className="animate-fade-in space-y-8">
+      {/* Video Info */}
+      {youtubeUrl && videoId && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-cyan-400 mb-2">Vídeo Analisado</h3>
+          <div className="space-y-2 text-sm text-slate-300">
+            <div><span className="text-slate-400">ID do Vídeo:</span> <code className="bg-slate-700 px-2 py-1 rounded text-cyan-300">{videoId}</code></div>
+            <div><span className="text-slate-400">URL:</span> <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline break-all">{youtubeUrl}</a></div>
+          </div>
+        </div>
+      )}
+
       {/* Song Info Header */}
       <div className="text-center p-6 bg-gradient-to-br from-slate-800 to-slate-800/50 rounded-xl border border-slate-700 relative">
         <div className="absolute top-4 right-4">
