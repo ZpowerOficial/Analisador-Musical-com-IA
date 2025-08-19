@@ -1,0 +1,5 @@
+{
+  "name": "Analisador Musical com IA",
+  "description": "Uma ferramenta que utiliza a IA Gemini para fornecer uma análise musical detalhada de músicas a partir de um link do YouTube, atuando como um engenheiro de som, compositor e musicista profissional.",
+  "requestFramePermissions": []
+}
