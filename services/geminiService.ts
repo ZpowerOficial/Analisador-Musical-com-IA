@@ -424,7 +424,6 @@ const LANGUAGE_MAPPING = {
 function createAdvancedAnalysisPrompt(data: ConsolidatedMusicData, language: string = 'pt-BR'): string {
   const lastfmData = data.lastfm;
   const youtubeData = data.youtube;
-  const lyricsData = data.lyrics;
 
   // Obter configurações do idioma
   const langConfig = LANGUAGE_MAPPING[language as keyof typeof LANGUAGE_MAPPING] || LANGUAGE_MAPPING['pt-BR'];
@@ -473,19 +472,16 @@ ${lastfmData ? `
 ${lastfmData.similar.length > 0 ? `- **Faixas Similares**: ${lastfmData.similar.slice(0, 3).map(s => `${s.name} - ${s.artist}`).join(', ')}` : ''}
 ` : 'Dados não disponíveis'}
 
-### DADOS DE LETRAS (Análise Literária)
-${lyricsData ? `
-- **Letras Encontradas**: ✅ Sim (${lyricsData.data.wordCount} palavras, ${lyricsData.data.lineCount} linhas)
-- **Estrutura**: ${lyricsData.data.hasChorus ? 'Com refrão' : 'Sem refrão identificado'}
-- **Sentimento**: ${lyricsData.analysis.sentiment}
-- **Temas Principais**: ${lyricsData.analysis.themes.join(', ') || 'Não identificados'}
-- **Perspectiva Narrativa**: ${lyricsData.analysis.narrativePerspective}
-- **Tom Emocional**: ${lyricsData.analysis.emotionalTone.join(', ')}
-- **Vocabulário**: ${lyricsData.analysis.vocabulary}
-- **Dispositivos Literários**: ${lyricsData.analysis.literaryDevices.join(', ') || 'Não identificados'}
-- **Referências Culturais**: ${lyricsData.analysis.culturalReferences.join(', ') || 'Não identificadas'}
-- **Prévia das Letras**: "${lyricsData.data.lyrics.substring(0, 200)}${lyricsData.data.lyrics.length > 200 ? '...' : ''}"
-` : 'Letras não disponíveis - Análise baseada em elementos musicais'}
+### DADOS DE LETRAS (Análise Baseada em Conhecimento)
+- **Status**: Letras não disponíveis (limitações de CORS das APIs)
+- **Método de Análise**: Baseado em conhecimento extenso sobre a música
+- **Fonte**: Conhecimento da IA sobre o artista "${data.artist}" e música "${data.title}"
+- **Contexto**: Use seu conhecimento sobre o gênero, artista e período para análise lírica
+- **Instruções**: Forneça análise lírica detalhada baseada em:
+  - Conhecimento sobre o artista e suas obras
+  - Características típicas do gênero musical
+  - Contexto cultural e histórico
+  - Temas comuns do artista/gênero
 
 ---
 
@@ -513,18 +509,17 @@ ${lyricsData ? `
 - Analise **espectro de frequências** (graves/médios/agudos) detalhadamente
 
 ### 4. ANÁLISE LÍRICA E SEMÂNTICA (Nível Literário Acadêmico)
-${lyricsData ? `
-- Analise **conteúdo temático** e **narrativa** das letras fornecidas
-- Avalie **dispositivos literários** e **técnicas poéticas** utilizadas
-- Determine **tom emocional** e **perspectiva narrativa**
-- Identifique **referências culturais** e **contexto social**
-- Correlacione **letras com elementos musicais** (harmonia, ritmo, melodia)
-- Avalie **sofisticação vocabular** e **complexidade literária**
-` : `
-- Realize análise baseada em **conhecimento geral** sobre o artista e estilo
-- Estime **temas prováveis** baseado no gênero e contexto cultural
-- Avalie **características líricas típicas** do gênero/artista
-`}
+**IMPORTANTE**: As letras não estão disponíveis devido a limitações de CORS das APIs.
+Realize análise lírica baseada em seu **conhecimento extenso** sobre a música:
+
+- Analise **temas prováveis** baseado no artista, gênero e contexto cultural
+- Estime **tom emocional** típico do artista e estilo musical
+- Identifique **características líricas** comuns do gênero
+- Avalie **dispositivos literários** típicos do estilo
+- Determine **perspectiva narrativa** comum no gênero
+- Correlacione **estilo lírico** com elementos musicais
+- Baseie-se em **conhecimento sobre o artista** e suas obras conhecidas
+- Use **contexto cultural** e **período histórico** da música
 
 ### 5. MÉTRICAS DE POPULARIDADE E IMPACTO
 - Calcule **popularidade global** baseada em dados consolidados

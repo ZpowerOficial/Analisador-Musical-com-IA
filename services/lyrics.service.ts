@@ -91,66 +91,26 @@ class LyricsService {
   }
 
   /**
-   * Busca letras usando múltiplas APIs como fallback
+   * Busca letras - DESABILITADA devido a limitações de CORS
+   * Retorna dados vazios para que a IA faça análise baseada em conhecimento
    */
   async getLyrics(artist: string, title: string, videoTitle?: string): Promise<LyricsData> {
-    // Normalizar entradas
     const normalizedArtist = this.normalizeForSearch(artist);
     const normalizedTitle = this.normalizeForSearch(title);
-    
-    // Se temos título do vídeo, tentar extrair informações mais precisas
-    let searchVariants = [
-      { artist: normalizedArtist, title: normalizedTitle }
-    ];
-    
-    if (videoTitle) {
-      const extracted = this.extractTitleAndArtist(videoTitle);
-      if (extracted.artist && extracted.title) {
-        searchVariants.unshift(extracted);
-      }
-    }
-    
-    // Tentar cada variante de busca
-    for (const variant of searchVariants) {
-      if (!variant.artist || !variant.title) continue;
-      
-      // Nota: Stands4 e Genius APIs desabilitadas temporariamente devido a problemas de CORS
-      // TODO: Implementar proxy server para contornar limitações de CORS
 
-      // Prioridade: Stands4 API se disponível (DESABILITADA)
-      // if (this.stands4ApiKey) {
-      //   const result = await this.fetchFromStands4(variant.artist, variant.title);
-      //   if (result.found) {
-      //     console.log('✅ Letras encontradas via Stands4 (variante)');
-      //     return result;
-      //   }
-      // }
+    console.log(`🎵 Análise de letras para: ${normalizedArtist} - ${normalizedTitle}`);
+    console.log('📝 Usando análise baseada em conhecimento da IA (APIs de letras desabilitadas devido a CORS)');
 
-      // Tentar cada API gratuita
-      for (const baseUrl of this.fallbackUrls) {
-        try {
-          const lyrics = await this.fetchFromApi(baseUrl, variant.artist, variant.title);
-          if (lyrics.found) {
-            return {
-              ...lyrics,
-              source: baseUrl,
-              ...this.analyzeLyricsStructure(lyrics.lyrics)
-            };
-          }
-        } catch (error) {
-          console.warn(`Erro na API ${baseUrl}:`, error);
-          continue;
-        }
-      }
-    }
-    
+    // Retornar dados vazios para que a IA faça análise baseada em conhecimento
+    // Isso é mais confiável do que tentar APIs com problemas de CORS
     return {
       lyrics: '',
       found: false,
-      source: 'none',
+      source: 'ai-knowledge',
       wordCount: 0,
       lineCount: 0,
-      hasChorus: false
+      hasChorus: false,
+      language: 'unknown'
     };
   }
 
