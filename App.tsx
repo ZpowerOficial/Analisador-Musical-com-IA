@@ -4,7 +4,7 @@ import { Header } from './components/Header';
 import { URLInput } from './components/URLInput';
 import { AnalysisDisplay } from './components/AnalysisDisplay';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { analyzeMusic, analyzePlaylist } from './services/geminiService';
+import { analyzeMusic, analyzeMusicAdvanced, analyzePlaylist } from './services/geminiService';
 import YouTubeService from './services/youtube.service';
 import type { Analysis } from './types';
 
@@ -20,6 +20,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
   const [progressMessage, setProgressMessage] = useState<string>('');
+  const [useAdvancedAnalysis, setUseAdvancedAnalysis] = useState<boolean>(false);
+  const [analysisDepth, setAnalysisDepth] = useState<'basic' | 'advanced' | 'expert'>('advanced');
 
   // Chaves de API - Carregadas de forma segura das variáveis de ambiente
   const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
@@ -83,24 +85,53 @@ const App: React.FC = () => {
           setError('Não foi possível analisar nenhuma música da playlist.');
         }
       } else {
-        setProgressMessage('🎵 Música individual detectada - Coletando dados...');
-        // Análise de música individual
-        const result = await analyzeMusic(
-          youtubeUrl,
-          geminiApiKey,
-          YOUTUBE_API_KEY,
-          LASTFM_API_KEY,
-          STANDS4_API_KEY,
-          GENIUS_API_KEY,
-          selectedLanguage,
-          setProgressMessage // Callback para atualizar progresso
-        );
+        if (useAdvancedAnalysis) {
+          setProgressMessage('🔬 Modo avançado ativado - Iniciando análise multi-especialista...');
+          // Advanced analysis with enhanced features
+          const result = await analyzeMusicAdvanced(
+            youtubeUrl,
+            geminiApiKey,
+            YOUTUBE_API_KEY,
+            LASTFM_API_KEY,
+            STANDS4_API_KEY,
+            GENIUS_API_KEY,
+            selectedLanguage,
+            analysisDepth
+          );
 
-        if (result.error) {
-          setError(result.error);
-          setAnalysis(null);
+          if (result.error) {
+            setError(result.error);
+            setAnalysis(null);
+          } else {
+            // Store the enhanced analysis with additional data
+            setAnalysis(result);
+            console.log('🔬 Advanced Analysis Complete:', {
+              confidenceScores: result.confidenceScores,
+              audioAnalysis: result.audioAnalysis,
+              lyricsExtraction: result.lyricsExtraction,
+              analysisTransparency: result.analysisTransparency
+            });
+          }
         } else {
-          setAnalysis(result);
+          setProgressMessage('🎵 Música individual detectada - Coletando dados...');
+          // Standard analysis
+          const result = await analyzeMusic(
+            youtubeUrl,
+            geminiApiKey,
+            YOUTUBE_API_KEY,
+            LASTFM_API_KEY,
+            STANDS4_API_KEY,
+            GENIUS_API_KEY,
+            selectedLanguage,
+            setProgressMessage // Callback para atualizar progresso
+          );
+
+          if (result.error) {
+            setError(result.error);
+            setAnalysis(null);
+          } else {
+            setAnalysis(result);
+          }
         }
       }
     } catch (err) {
@@ -114,7 +145,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setProgressMessage('');
     }
-  }, [youtubeUrl, geminiApiKey, isPlaylist, selectedLanguage, YOUTUBE_API_KEY, LASTFM_API_KEY]);
+  }, [youtubeUrl, geminiApiKey, isPlaylist, selectedLanguage, useAdvancedAnalysis, analysisDepth, YOUTUBE_API_KEY, LASTFM_API_KEY]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
@@ -193,6 +224,69 @@ const App: React.FC = () => {
                 Isso garante análises precisas e contextualizadas sem depender de APIs externas com limitações.
               </p>
             </div>
+          </div>
+
+          {/* Advanced Analysis Controls */}
+          <div className="mb-6 text-left">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-slate-400">
+                🔬 Modo de Análise Avançada
+              </label>
+              <button
+                type="button"
+                onClick={() => setUseAdvancedAnalysis(!useAdvancedAnalysis)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                  useAdvancedAnalysis ? 'bg-cyan-600' : 'bg-slate-600'
+                }`}
+                disabled={isLoading}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    useAdvancedAnalysis ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {useAdvancedAnalysis && (
+              <div className="space-y-4 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                <div>
+                  <label htmlFor="analysis-depth" className="block text-sm font-medium text-slate-400 mb-2">
+                    📊 Profundidade da Análise
+                  </label>
+                  <select
+                    id="analysis-depth"
+                    value={analysisDepth}
+                    onChange={(e) => setAnalysisDepth(e.target.value as 'basic' | 'advanced' | 'expert')}
+                    disabled={isLoading}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 disabled:opacity-50 text-white text-sm"
+                  >
+                    <option value="basic">🎵 Básica - Análise padrão</option>
+                    <option value="advanced">🎼 Avançada - Análise técnica detalhada</option>
+                    <option value="expert">🎓 Expert - Análise acadêmica completa</option>
+                  </select>
+                </div>
+
+                <div className="p-3 bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-700/50 rounded-lg">
+                  <h4 className="text-sm font-semibold text-cyan-300 mb-2">🚀 Recursos Avançados Inclusos:</h4>
+                  <ul className="text-xs text-cyan-200 space-y-1">
+                    <li>• <strong>Análise de Áudio Espectral:</strong> Frequências, harmônicos, dinâmica</li>
+                    <li>• <strong>Prompt Engineering Multi-Especialista:</strong> Engenheiro de som, musicólogo, analista lírico</li>
+                    <li>• <strong>Chain-of-Thought Reasoning:</strong> Raciocínio passo-a-passo transparente</li>
+                    <li>• <strong>Scores de Confiança:</strong> Transparência sobre a qualidade da análise</li>
+                    <li>• <strong>Extração Lírica Avançada:</strong> Múltiplos métodos de obtenção de letras</li>
+                    <li>• <strong>Análise de Produção:</strong> Compressão, EQ, imagem estéreo</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 mt-2">
+              {useAdvancedAnalysis
+                ? "Modo avançado ativo: análise mais profunda com múltiplos especialistas IA"
+                : "Modo padrão: análise completa e rápida"
+              }
+            </p>
           </div>
 
           <URLInput

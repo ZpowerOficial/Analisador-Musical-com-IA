@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build with Tailwind CSS
         run: npm run build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -37,6 +37,9 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           STANDS4_API_KEY: ${{ secrets.STANDS4_API_KEY }}
           GENIUS_API_KEY: ${{ secrets.GENIUS_API_KEY }}
+
+      - name: Copy .nojekyll
+        run: cp public/.nojekyll dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

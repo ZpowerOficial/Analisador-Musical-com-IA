@@ -1,6 +1,8 @@
 
 import React, { useState, useCallback } from 'react';
 import type { Analysis } from '../types';
+import { AdvancedAnalysisDisplay } from './AdvancedAnalysisDisplay';
+import type { AudioAnalysisResult, LyricsExtractionResult } from '../services/audioAnalysis.service';
 import { MusicNoteIcon } from './icons/MusicNoteIcon';
 import { SoundWaveIcon } from './icons/SoundWaveIcon';
 import { ComposerIcon } from './icons/ComposerIcon';
@@ -10,7 +12,16 @@ import { ClipboardIcon } from './icons/ClipboardIcon';
 import { CheckIcon } from './icons/CheckIcon';
 
 interface AnalysisDisplayProps {
-  analysis: Analysis;
+  analysis: Analysis & {
+    audioAnalysis?: AudioAnalysisResult;
+    lyricsExtraction?: LyricsExtractionResult;
+    confidenceScores?: Record<string, number>;
+    analysisTransparency?: {
+      methods: string[];
+      limitations: string[];
+      dataSource: string;
+    };
+  };
   youtubeUrl?: string;
 }
 
@@ -373,6 +384,14 @@ ${soundEngineering.instrumentation.map(i => `- ${i.instrument}: ${i.performanceA
           </dl>
         </AnalysisCard>
       )}
+
+      {/* Advanced Analysis Display */}
+      <AdvancedAnalysisDisplay
+        audioAnalysis={analysis.audioAnalysis}
+        lyricsExtraction={analysis.lyricsExtraction}
+        confidenceScores={analysis.confidenceScores}
+        analysisTransparency={analysis.analysisTransparency}
+      />
 
     </div>
   );

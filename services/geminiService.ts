@@ -4,6 +4,8 @@ import type { Analysis, PlaylistAnalysis } from '../types';
 import YouTubeService, { type YouTubeVideoData, type YouTubePlaylistData } from './youtube.service';
 import LastFmService, { type LastFmTrackInfo, type LastFmArtistInfo } from './lastfm.service';
 import LyricsService, { type LyricsData, type LyricsAnalysis } from './lyrics.service';
+import AudioAnalysisService, { type AudioAnalysisResult, type LyricsExtractionResult } from './audioAnalysis.service';
+import PromptEngineeringService, { type AnalysisPromptConfig } from './promptEngineering.service';
 
 /**
  * Dados consolidados para análise musical profissional
@@ -373,6 +375,58 @@ function parseDuration(duration: string): number {
 }
 
 /**
+ * Advanced Audio Analysis Frameworks
+ */
+const AUDIO_ANALYSIS_FRAMEWORKS = {
+  harmonic: {
+    methods: ['Schenkerian Analysis', 'Neo-Riemannian Theory', 'Functional Harmony', 'Jazz Theory'],
+    parameters: ['chord_progressions', 'voice_leading', 'modulations', 'harmonic_rhythm']
+  },
+  rhythmic: {
+    methods: ['Metric Analysis', 'Groove Quantization', 'Polyrhythmic Detection', 'Temporal Displacement'],
+    parameters: ['beat_tracking', 'tempo_variations', 'syncopation_patterns', 'metric_modulation']
+  },
+  spectral: {
+    methods: ['FFT Analysis', 'Mel-frequency Cepstral Coefficients', 'Chromagram Analysis', 'Spectral Centroid'],
+    parameters: ['frequency_distribution', 'harmonic_content', 'noise_floor', 'dynamic_range']
+  },
+  production: {
+    methods: ['LUFS Measurement', 'Stereo Imaging Analysis', 'Frequency Response', 'Compression Detection'],
+    parameters: ['loudness_range', 'stereo_width', 'eq_curve', 'compression_ratio']
+  }
+};
+
+/**
+ * Specialized AI Roles for Musical Analysis
+ */
+const AI_SPECIALIST_ROLES = {
+  audio_engineer: {
+    expertise: 'Grammy-winning mixing/mastering engineer with 25+ years experience',
+    focus: 'Technical audio analysis, production quality, sonic characteristics',
+    tools: ['Pro Tools', 'Logic Pro', 'Ableton Live', 'Hardware analyzers'],
+    certifications: ['AES Fellow', 'NARAS Voting Member', 'Dolby Atmos Certified']
+  },
+  musicologist: {
+    expertise: 'PhD in Historical Musicology and Ethnomusicology from Harvard/Juilliard',
+    focus: 'Theoretical analysis, cultural context, historical significance',
+    specializations: ['Western Classical', 'Jazz Theory', 'World Music', 'Popular Music Studies'],
+    publications: ['Peer-reviewed journals', 'Academic books', 'Conference presentations']
+  },
+  lyricist_analyst: {
+    expertise: 'Professional songwriter and literary analyst with linguistics background',
+    focus: 'Lyrical content, poetic devices, narrative structure, vocal delivery',
+    skills: ['Phonetic analysis', 'Prosodic analysis', 'Semantic analysis', 'Cultural linguistics'],
+    experience: ['Billboard charting songs', 'Literary criticism', 'Vocal coaching']
+  },
+  genre_specialist: {
+    expertise: 'Multi-genre music curator and trend analyst',
+    focus: 'Genre classification, cross-genre influences, cultural movements',
+    knowledge: ['Regional scenes', 'Historical evolution', 'Fusion genres', 'Emerging trends'],
+    networks: ['Industry contacts', 'Cultural institutions', 'Academic partnerships']
+  }
+};
+
+/**
  * Mapeamento de idiomas suportados
  */
 const LANGUAGE_MAPPING = {
@@ -543,6 +597,139 @@ Seja específico, técnico e fundamentado em dados quando disponível.
 LEMBRE-SE: Toda a resposta deve estar no idioma ${langConfig.name}.
 `;
 }
+
+/**
+ * Enhanced Music Analysis with Advanced Audio Processing and Prompt Engineering
+ */
+export const analyzeMusicAdvanced = async (
+  url: string,
+  geminiApiKey: string,
+  youtubeApiKey: string,
+  lastfmApiKey: string,
+  stands4ApiKey: string = '',
+  geniusApiKey: string = '',
+  language: string = 'pt-BR',
+  analysisDepth: 'basic' | 'advanced' | 'expert' = 'advanced'
+): Promise<Analysis & {
+  audioAnalysis: AudioAnalysisResult;
+  lyricsExtraction: LyricsExtractionResult;
+  confidenceScores: Record<string, number>;
+  analysisTransparency: {
+    methods: string[];
+    limitations: string[];
+    dataSource: string;
+  };
+}> => {
+  console.log('🎵 Starting Advanced Musical Analysis...');
+
+  // Initialize advanced services
+  const audioAnalysisService = new AudioAnalysisService();
+  const promptEngineeringService = new PromptEngineeringService();
+
+  // Extract video ID
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) {
+    throw new Error('Invalid YouTube URL');
+  }
+
+  // Step 1: Use existing data gathering (call the regular analyzeMusic first)
+  console.log('📊 Gathering basic music data...');
+  const basicAnalysis = await analyzeMusic(url, geminiApiKey, youtubeApiKey, lastfmApiKey, stands4ApiKey, geniusApiKey, language);
+
+  // Extract consolidated data from basic analysis
+  const basicData: ConsolidatedMusicData = {
+    title: basicAnalysis.songInfo.title,
+    artist: basicAnalysis.songInfo.artist,
+    duration: 0, // Will be filled by audio analysis
+    platform: 'youtube',
+    analysisTimestamp: new Date().toISOString(),
+    youtube: {
+      videoId,
+      channelTitle: basicAnalysis.songInfo.artist,
+      description: '',
+      viewCount: 0,
+      likeCount: 0,
+      publishedAt: new Date().toISOString(),
+      tags: [],
+      categoryId: 'Music'
+    }
+  };
+
+  // Step 2: Advanced audio analysis
+  console.log('🔊 Performing advanced audio analysis...');
+  const audioAnalysis = await audioAnalysisService.analyzeAudioFromYouTube(videoId, youtubeApiKey);
+
+  // Step 3: Enhanced lyrics extraction
+  console.log('🎤 Extracting lyrics with advanced methods...');
+  const lyricsExtraction = await audioAnalysisService.extractLyricsAdvanced(
+    basicAnalysis.songInfo.artist,
+    basicAnalysis.songInfo.title,
+    videoId
+  );
+
+  // Step 4: Generate advanced prompt
+  const promptConfig: AnalysisPromptConfig = {
+    language,
+    analysisDepth,
+    specializations: ['audio_engineer', 'musicologist', 'lyricist_analyst', 'genre_specialist'],
+    confidenceThreshold: 0.6
+  };
+
+  const advancedPrompt = promptEngineeringService.generateAdvancedPrompt(
+    basicData,
+    audioAnalysis,
+    lyricsExtraction,
+    promptConfig
+  );
+
+  // Step 5: AI Analysis with advanced prompt
+  console.log('🧠 Performing AI analysis with advanced prompting...');
+  const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents: advancedPrompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: advancedAnalysisSchema,
+      temperature: 0.3,
+      maxOutputTokens: 8192
+    }
+  });
+
+  // Step 6: Parse and enhance results
+  const responseText = response.text || '{}';
+  const analysis = JSON.parse(responseText) as Analysis;
+
+  // Step 7: Add advanced analysis data
+  return {
+    ...analysis,
+    audioAnalysis,
+    lyricsExtraction,
+    confidenceScores: {
+      overall: audioAnalysis.confidence_scores.overall,
+      audio: audioAnalysis.confidence_scores.overall,
+      lyrics: lyricsExtraction.confidence,
+      harmonic: audioAnalysis.confidence_scores.harmonic,
+      rhythmic: audioAnalysis.confidence_scores.rhythmic,
+      production: audioAnalysis.confidence_scores.production
+    },
+    analysisTransparency: {
+      methods: [
+        'Advanced AI Prompt Engineering',
+        'Multi-Specialist Analysis Framework',
+        'Chain-of-Thought Reasoning',
+        ...audioAnalysis.analysis_methods
+      ],
+      limitations: [
+        'Browser-based audio processing limitations',
+        'AI knowledge-based lyrical analysis',
+        ...audioAnalysis.limitations
+      ],
+      dataSource: `YouTube API + Last.fm API + Advanced AI Analysis (${analysisDepth} mode)`
+    }
+  };
+};
 
 export const analyzeMusic = async (
   url: string,
