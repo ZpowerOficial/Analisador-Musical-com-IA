@@ -17,19 +17,18 @@ const App: React.FC = () => {
   const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
   const [progressMessage, setProgressMessage] = useState<string>('');
 
-  // Chaves de API - REMOVIDAS POR SEGURANÇA
-  // Usuário deve fornecer suas próprias chaves
-  const [youtubeApiKey, setYoutubeApiKey] = useState<string>('');
-  const [lastfmApiKey, setLastfmApiKey] = useState<string>('');
+  // Chaves de API - Carregadas de forma segura das variáveis de ambiente
+  const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
+  const LASTFM_API_KEY = process.env.LASTFM_API_KEY || '';
 
 
   // Detectar se é playlist ou vídeo individual
   const detectUrlType = useCallback((url: string) => {
-    if (!youtubeApiKey) return; // Só detecta se tiver chave
-    const youtubeService = new YouTubeService(youtubeApiKey);
+    if (!YOUTUBE_API_KEY) return; // Só detecta se tiver chave
+    const youtubeService = new YouTubeService(YOUTUBE_API_KEY);
     const urlType = youtubeService.getUrlType(url);
     setIsPlaylist(urlType === 'playlist');
-  }, [youtubeApiKey]);
+  }, [YOUTUBE_API_KEY]);
 
   // Atualizar detecção quando URL muda
   React.useEffect(() => {
@@ -48,10 +47,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Avisar sobre funcionalidades limitadas sem chaves opcionais
-    if (!youtubeApiKey.trim() || !lastfmApiKey.trim()) {
-      console.warn('⚠️ Algumas funcionalidades podem ser limitadas sem as chaves opcionais do YouTube e Last.fm');
-    }
 
     setIsLoading(true);
     setError(null);
@@ -65,8 +60,8 @@ const App: React.FC = () => {
         const playlistResult = await analyzePlaylist(
           youtubeUrl,
           geminiApiKey,
-          youtubeApiKey,
-          lastfmApiKey,
+          YOUTUBE_API_KEY,
+          LASTFM_API_KEY,
           10, // Máximo 10 músicas para não exceder limites
           setProgressMessage // Callback para atualizar progresso
         );
@@ -84,8 +79,8 @@ const App: React.FC = () => {
         const result = await analyzeMusic(
           youtubeUrl,
           geminiApiKey,
-          youtubeApiKey,
-          lastfmApiKey,
+          YOUTUBE_API_KEY,
+          LASTFM_API_KEY,
           setProgressMessage // Callback para atualizar progresso
         );
 
@@ -107,7 +102,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setProgressMessage('');
     }
-  }, [youtubeUrl, geminiApiKey, isPlaylist, youtubeApiKey, lastfmApiKey]);
+  }, [youtubeUrl, geminiApiKey, isPlaylist, YOUTUBE_API_KEY, LASTFM_API_KEY]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
@@ -137,50 +132,7 @@ const App: React.FC = () => {
                 Obtenha sua chave aqui.
               </a>
             </p>
-          </div>
 
-          {/* YouTube API Key */}
-          <div className="mb-6 text-left">
-            <label htmlFor="youtube-api-key" className="block text-sm font-medium text-slate-400 mb-2">
-              Chave de API do YouTube (Opcional)
-            </label>
-            <input
-              id="youtube-api-key"
-              type="password"
-              value={youtubeApiKey}
-              onChange={(e) => setYoutubeApiKey(e.target.value)}
-              placeholder="Cole sua chave do YouTube aqui (opcional)"
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 placeholder-slate-500 disabled:opacity-50"
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              Para análises mais detalhadas.
-              <a href="https://console.developers.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">
-                Obtenha sua chave aqui.
-              </a>
-            </p>
-          </div>
-
-          {/* Last.fm API Key */}
-          <div className="mb-6 text-left">
-            <label htmlFor="lastfm-api-key" className="block text-sm font-medium text-slate-400 mb-2">
-              Chave de API do Last.fm (Opcional)
-            </label>
-            <input
-              id="lastfm-api-key"
-              type="password"
-              value={lastfmApiKey}
-              onChange={(e) => setLastfmApiKey(e.target.value)}
-              placeholder="Cole sua chave do Last.fm aqui (opcional)"
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 placeholder-slate-500 disabled:opacity-50"
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              Para dados de popularidade e tendências.
-              <a href="https://www.last.fm/api/account/create" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">
-                Obtenha sua chave aqui.
-              </a>
-            </p>
             <details className="mt-3 text-xs text-slate-500">
               <summary className="cursor-pointer hover:text-slate-400">💡 Problemas com a API? Clique aqui para ajuda</summary>
               <div className="mt-2 p-3 bg-slate-800/50 rounded border border-slate-700 space-y-2">
