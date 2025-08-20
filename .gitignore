@@ -12,6 +12,21 @@ dist
 dist-ssr
 *.local
 
+# Environment variables - CRÍTICO PARA SEGURANÇA
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Arquivos com chaves de API (NUNCA COMMITAR)
+**/api-keys.js
+**/api-keys.ts
+**/config/keys.js
+**/config/keys.ts
+**/*-keys.*
+**/*-secrets.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
