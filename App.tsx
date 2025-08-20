@@ -11,6 +11,10 @@ import type { Analysis } from './types';
 const App: React.FC = () => {
   const [youtubeUrl, setYoutubeUrl] = useState<string>('');
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(() => {
+    // Carregar idioma salvo ou usar português como padrão
+    return localStorage.getItem('analisador-language') || 'pt-BR';
+  });
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +24,8 @@ const App: React.FC = () => {
   // Chaves de API - Carregadas de forma segura das variáveis de ambiente
   const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
   const LASTFM_API_KEY = process.env.LASTFM_API_KEY || '';
+  const STANDS4_API_KEY = process.env.STANDS4_API_KEY || '';
+  const GENIUS_API_KEY = process.env.GENIUS_API_KEY || '';
 
 
   // Detectar se é playlist ou vídeo individual
@@ -62,6 +68,9 @@ const App: React.FC = () => {
           geminiApiKey,
           YOUTUBE_API_KEY,
           LASTFM_API_KEY,
+          STANDS4_API_KEY,
+          GENIUS_API_KEY,
+          selectedLanguage,
           10, // Máximo 10 músicas para não exceder limites
           setProgressMessage // Callback para atualizar progresso
         );
@@ -81,6 +90,9 @@ const App: React.FC = () => {
           geminiApiKey,
           YOUTUBE_API_KEY,
           LASTFM_API_KEY,
+          STANDS4_API_KEY,
+          GENIUS_API_KEY,
+          selectedLanguage,
           setProgressMessage // Callback para atualizar progresso
         );
 
@@ -102,7 +114,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setProgressMessage('');
     }
-  }, [youtubeUrl, geminiApiKey, isPlaylist, YOUTUBE_API_KEY, LASTFM_API_KEY]);
+  }, [youtubeUrl, geminiApiKey, isPlaylist, selectedLanguage, YOUTUBE_API_KEY, LASTFM_API_KEY]);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
@@ -145,6 +157,36 @@ const App: React.FC = () => {
                 </ol>
               </div>
             </details>
+          </div>
+
+          {/* Seleção de Idioma */}
+          <div className="mb-6 text-left">
+            <label htmlFor="language-select" className="block text-sm font-medium text-slate-400 mb-2">
+              🌍 Idioma da Análise
+            </label>
+            <select
+              id="language-select"
+              value={selectedLanguage}
+              onChange={(e) => {
+                const newLanguage = e.target.value;
+                setSelectedLanguage(newLanguage);
+                localStorage.setItem('analisador-language', newLanguage);
+              }}
+              disabled={isLoading}
+              className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-300 disabled:opacity-50 text-white"
+            >
+              <option value="pt-BR">🇧🇷 Português (Brasil)</option>
+              <option value="en-US">🇺🇸 English (US)</option>
+              <option value="es-ES">🇪🇸 Español (España)</option>
+              <option value="fr-FR">🇫🇷 Français (France)</option>
+              <option value="de-DE">🇩🇪 Deutsch (Deutschland)</option>
+              <option value="it-IT">🇮🇹 Italiano (Italia)</option>
+              <option value="ja-JP">🇯🇵 日本語 (日本)</option>
+              <option value="ko-KR">🇰🇷 한국어 (대한민국)</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-2">
+              Escolha o idioma para receber a análise musical completa.
+            </p>
           </div>
 
           <URLInput

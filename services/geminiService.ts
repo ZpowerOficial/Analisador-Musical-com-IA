@@ -259,11 +259,13 @@ async function consolidateMusicData(
   url: string,
   youtubeApiKey: string,
   lastfmApiKey: string,
+  stands4ApiKey: string,
+  geniusApiKey: string,
   onProgress?: (message: string) => void
 ): Promise<ConsolidatedMusicData | null> {
   const youtubeService = new YouTubeService(youtubeApiKey);
   const lastfmService = new LastFmService(lastfmApiKey);
-  const lyricsService = new LyricsService();
+  const lyricsService = new LyricsService(stands4ApiKey, geniusApiKey);
 
   // Determinar tipo de URL e extrair dados
   const urlType = youtubeService.getUrlType(url);
@@ -371,22 +373,73 @@ function parseDuration(duration: string): number {
 }
 
 /**
+ * Mapeamento de idiomas suportados
+ */
+const LANGUAGE_MAPPING = {
+  'pt-BR': {
+    name: 'Português (Brasil)',
+    instruction: 'Responda EXCLUSIVAMENTE em português brasileiro. Use terminologia musical em português.',
+    expertise: 'Dr. Musicólogo Brasileiro, Eng. de Som Master, Compositor Virtuoso, Analista de Tendências'
+  },
+  'en-US': {
+    name: 'English (US)',
+    instruction: 'Respond EXCLUSIVELY in English. Use proper musical terminology in English.',
+    expertise: 'Dr. Musicologist, Master Sound Engineer, Virtuoso Composer, Trends Analyst'
+  },
+  'es-ES': {
+    name: 'Español (España)',
+    instruction: 'Responde EXCLUSIVAMENTE en español. Usa terminología musical en español.',
+    expertise: 'Dr. Musicólogo, Ingeniero de Sonido Master, Compositor Virtuoso, Analista de Tendencias'
+  },
+  'fr-FR': {
+    name: 'Français (France)',
+    instruction: 'Répondez EXCLUSIVEMENT en français. Utilisez la terminologie musicale en français.',
+    expertise: 'Dr. Musicologue, Ingénieur du Son Master, Compositeur Virtuose, Analyste de Tendances'
+  },
+  'de-DE': {
+    name: 'Deutsch (Deutschland)',
+    instruction: 'Antworten Sie AUSSCHLIESSLICH auf Deutsch. Verwenden Sie deutsche Musikterminologie.',
+    expertise: 'Dr. Musikwissenschaftler, Master-Toningenieur, Virtuoser Komponist, Trend-Analyst'
+  },
+  'it-IT': {
+    name: 'Italiano (Italia)',
+    instruction: 'Rispondi ESCLUSIVAMENTE in italiano. Usa la terminologia musicale in italiano.',
+    expertise: 'Dr. Musicologo, Ingegnere del Suono Master, Compositore Virtuoso, Analista di Tendenze'
+  },
+  'ja-JP': {
+    name: '日本語 (日本)',
+    instruction: 'Respond EXCLUSIVELY in Japanese. Use proper musical terminology in Japanese.',
+    expertise: '音楽学博士、マスター音響エンジニア、バーチュオーゾ作曲家、トレンドアナリスト'
+  },
+  'ko-KR': {
+    name: '한국어 (대한민국)',
+    instruction: 'Respond EXCLUSIVELY in Korean. Use proper musical terminology in Korean.',
+    expertise: '음악학 박사, 마스터 사운드 엔지니어, 비르투오소 작곡가, 트렌드 분석가'
+  }
+};
+
+/**
  * Cria prompt de análise musical de nível pós-doutorado
  */
-function createAdvancedAnalysisPrompt(data: ConsolidatedMusicData): string {
+function createAdvancedAnalysisPrompt(data: ConsolidatedMusicData, language: string = 'pt-BR'): string {
   const lastfmData = data.lastfm;
   const youtubeData = data.youtube;
   const lyricsData = data.lyrics;
+
+  // Obter configurações do idioma
+  const langConfig = LANGUAGE_MAPPING[language as keyof typeof LANGUAGE_MAPPING] || LANGUAGE_MAPPING['pt-BR'];
 
   return `
 # ANÁLISE MUSICAL ACADÊMICA AVANÇADA
 ## Nível: Pós-Doutorado em Musicologia, Engenharia de Áudio e Composição
 
+**IDIOMA DE RESPOSTA**: ${langConfig.instruction}
+
 Você é um consórcio de especialistas de elite mundial:
-- **Dr. Musicólogo**: PhD em Musicologia Histórica e Etnomusicologia (Harvard/Juilliard)
-- **Eng. de Som Master**: 30+ anos, Grammy winner, especialista em análise espectral
-- **Compositor Virtuoso**: Mestre em teoria musical avançada e análise harmônica
-- **Analista de Tendências**: Especialista em sociologia musical e impacto cultural
+- **${langConfig.expertise.split(', ')[0]}**: PhD em Musicologia Histórica e Etnomusicologia (Harvard/Juilliard)
+- **${langConfig.expertise.split(', ')[1]}**: 30+ anos, Grammy winner, especialista em análise espectral
+- **${langConfig.expertise.split(', ')[2]}**: Mestre em teoria musical avançada e análise harmônica
+- **${langConfig.expertise.split(', ')[3]}**: Especialista em sociologia musical e impacto cultural
 
 ---
 
@@ -483,12 +536,16 @@ ${lyricsData ? `
 
 ## FORMATO DE RESPOSTA OBRIGATÓRIO
 
+**IDIOMA OBRIGATÓRIO**: ${langConfig.instruction}
+
 Responda EXCLUSIVAMENTE em formato JSON seguindo o schema fornecido.
 Cada campo deve ser preenchido com análise profunda e tecnicamente precisa.
 Use terminologia acadêmica apropriada para cada área de especialização.
+TODOS os textos dentro do JSON devem estar no idioma especificado acima.
 
 **CRÍTICO**: Esta análise deve refletir o nível de um paper acadêmico de pós-doutorado.
 Seja específico, técnico e fundamentado em dados quando disponível.
+LEMBRE-SE: Toda a resposta deve estar no idioma ${langConfig.name}.
 `;
 }
 
@@ -497,6 +554,9 @@ export const analyzeMusic = async (
   geminiApiKey: string,
   youtubeApiKey: string,
   lastfmApiKey: string,
+  stands4ApiKey: string = '',
+  geniusApiKey: string = '',
+  language: string = 'pt-BR',
   onProgress?: (message: string) => void
 ): Promise<Analysis> => {
     if (!geminiApiKey) {
@@ -513,7 +573,7 @@ export const analyzeMusic = async (
 
     onProgress?.('📊 Coletando dados do YouTube...');
     // Consolidar dados de múltiplas fontes
-    const consolidatedData = await consolidateMusicData(url, youtubeApiKey, lastfmApiKey, onProgress);
+    const consolidatedData = await consolidateMusicData(url, youtubeApiKey, lastfmApiKey, stands4ApiKey, geniusApiKey, onProgress);
 
     if (!consolidatedData) {
         throw new Error("Não foi possível obter dados da música. Verifique se a URL é válida.");
@@ -524,7 +584,7 @@ export const analyzeMusic = async (
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
     // Criar prompt profissional de nível pós-doutorado
-    const prompt = createAdvancedAnalysisPrompt(consolidatedData);
+    const prompt = createAdvancedAnalysisPrompt(consolidatedData, language);
 
   try {
     const response = await ai.models.generateContent({
@@ -579,6 +639,9 @@ export const analyzePlaylist = async (
   geminiApiKey: string,
   youtubeApiKey: string,
   lastfmApiKey: string,
+  stands4ApiKey: string = '',
+  geniusApiKey: string = '',
+  language: string = 'pt-BR',
   maxTracks: number = 20,
   onProgress?: (message: string) => void
 ): Promise<PlaylistAnalysis> => {
@@ -611,7 +674,7 @@ export const analyzePlaylist = async (
 
     try {
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
-      const analysis = await analyzeMusic(videoUrl, geminiApiKey, youtubeApiKey, lastfmApiKey, onProgress);
+      const analysis = await analyzeMusic(videoUrl, geminiApiKey, youtubeApiKey, lastfmApiKey, stands4ApiKey, geniusApiKey, language, onProgress);
 
       trackAnalyses.push(analysis);
 

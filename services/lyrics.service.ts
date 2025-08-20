@@ -31,10 +31,20 @@ export interface LyricsAnalysis {
 }
 
 class LyricsService {
-  private readonly baseUrls = [
+  private stands4ApiKey: string;
+  private geniusApiKey: string;
+  private stands4BaseUrl = 'https://www.stands4.com/services/v2/lyrics.php';
+  private geniusBaseUrl = 'https://api.genius.com';
+
+  private readonly fallbackUrls = [
     'https://api.lyrics.ovh/v1',
     'https://lyrist.vercel.app/api'
   ];
+
+  constructor(stands4ApiKey: string = '', geniusApiKey: string = '') {
+    this.stands4ApiKey = stands4ApiKey || process.env.STANDS4_API_KEY || '';
+    this.geniusApiKey = geniusApiKey || process.env.GENIUS_API_KEY || '';
+  }
 
   /**
    * Normaliza nomes de artistas e músicas para melhor busca
@@ -104,8 +114,17 @@ class LyricsService {
     for (const variant of searchVariants) {
       if (!variant.artist || !variant.title) continue;
       
-      // Tentar cada API
-      for (const baseUrl of this.baseUrls) {
+      // Prioridade: Stands4 API se disponível
+      if (this.stands4ApiKey) {
+        const result = await this.fetchFromStands4(variant.artist, variant.title);
+        if (result.found) {
+          console.log('✅ Letras encontradas via Stands4 (variante)');
+          return result;
+        }
+      }
+
+      // Tentar cada API gratuita
+      for (const baseUrl of this.fallbackUrls) {
         try {
           const lyrics = await this.fetchFromApi(baseUrl, variant.artist, variant.title);
           if (lyrics.found) {
@@ -130,6 +149,117 @@ class LyricsService {
       lineCount: 0,
       hasChorus: false
     };
+  }
+
+  /**
+   * Busca letras usando Stands4 API
+   */
+  private async fetchFromStands4(artist: string, title: string): Promise<LyricsData> {
+    try {
+      const params = new URLSearchParams({
+        uid: this.stands4ApiKey,
+        tokenid: this.stands4ApiKey,
+        term: `${artist} ${title}`,
+        format: 'json'
+      });
+
+      const response = await fetch(`${this.stands4BaseUrl}?${params}`);
+
+      if (!response.ok) {
+        console.warn(`❌ Stands4 API error: ${response.status}`);
+        return { lyrics: '', found: false, source: 'stands4' };
+      }
+
+      const data = await response.json();
+
+      if (data.result && data.result.length > 0) {
+        const result = data.result[0];
+        const lyrics = result.song_lyrics || '';
+
+        if (lyrics.length > 50) {
+          return {
+            lyrics,
+            found: true,
+            source: 'stands4',
+            language: 'en',
+            wordCount: lyrics.split(/\s+/).length,
+            lineCount: lyrics.split('\n').length,
+            hasChorus: this.detectChorus(lyrics)
+          };
+        }
+      }
+
+      return { lyrics: '', found: false, source: 'stands4' };
+    } catch (error) {
+      console.error('❌ Erro na Stands4 API:', error);
+      return { lyrics: '', found: false, source: 'stands4' };
+    }
+  }
+
+  /**
+   * Busca metadados usando Genius API
+   */
+  private async fetchFromGenius(artist: string, title: string): Promise<LyricsData> {
+    try {
+      const searchParams = new URLSearchParams({
+        q: `${artist} ${title}`
+      });
+
+      const searchResponse = await fetch(
+        `${this.geniusBaseUrl}/search?${searchParams}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.geniusApiKey}`,
+            'User-Agent': 'Analisador Musical com IA'
+          }
+        }
+      );
+
+      if (!searchResponse.ok) {
+        console.warn(`❌ Genius search error: ${searchResponse.status}`);
+        return { lyrics: '', found: false, source: 'genius' };
+      }
+
+      const searchData = await searchResponse.json();
+
+      if (searchData.response?.hits?.length > 0) {
+        const hit = searchData.response.hits[0];
+        const song = hit.result;
+
+        // Genius não fornece letras completas via API
+        return {
+          lyrics: `Música encontrada no Genius: ${song.full_title}`,
+          found: false, // Não temos letras completas
+          source: 'genius',
+          wordCount: 0,
+          lineCount: 0,
+          hasChorus: false
+        };
+      }
+
+      return { lyrics: '', found: false, source: 'genius' };
+    } catch (error) {
+      console.error('❌ Erro na Genius API:', error);
+      return { lyrics: '', found: false, source: 'genius' };
+    }
+  }
+
+  /**
+   * Detecta se as letras têm refrão
+   */
+  private detectChorus(lyrics: string): boolean {
+    const lines = lyrics.split('\n').map(line => line.trim().toLowerCase());
+    const lineFrequency: { [line: string]: number } = {};
+
+    // Contar frequência de cada linha
+    lines.forEach(line => {
+      if (line.length > 10) { // Ignorar linhas muito curtas
+        lineFrequency[line] = (lineFrequency[line] || 0) + 1;
+      }
+    });
+
+    // Se alguma linha aparece 3+ vezes, provavelmente é refrão
+    return Object.values(lineFrequency).some(count => count >= 3);
   }
 
   /**

@@ -8,9 +8,11 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       base: '/Analisador-Musical-com-IA/',
       define: {
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
-        'process.env.YOUTUBE_API_KEY': JSON.stringify(env.VITE_YOUTUBE_API_KEY),
-        'process.env.LASTFM_API_KEY': JSON.stringify(env.VITE_LASTFM_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY),
+        'process.env.YOUTUBE_API_KEY': JSON.stringify(env.VITE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY),
+        'process.env.LASTFM_API_KEY': JSON.stringify(env.VITE_LASTFM_API_KEY || process.env.LASTFM_API_KEY),
+        'process.env.STANDS4_API_KEY': JSON.stringify(env.VITE_STANDS4_API_KEY || process.env.STANDS4_API_KEY),
+        'process.env.GENIUS_API_KEY': JSON.stringify(env.VITE_GENIUS_API_KEY || process.env.GENIUS_API_KEY)
       },
       resolve: {
         alias: {
