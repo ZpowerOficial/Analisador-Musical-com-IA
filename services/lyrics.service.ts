@@ -114,14 +114,17 @@ class LyricsService {
     for (const variant of searchVariants) {
       if (!variant.artist || !variant.title) continue;
       
-      // Prioridade: Stands4 API se disponível
-      if (this.stands4ApiKey) {
-        const result = await this.fetchFromStands4(variant.artist, variant.title);
-        if (result.found) {
-          console.log('✅ Letras encontradas via Stands4 (variante)');
-          return result;
-        }
-      }
+      // Nota: Stands4 e Genius APIs desabilitadas temporariamente devido a problemas de CORS
+      // TODO: Implementar proxy server para contornar limitações de CORS
+
+      // Prioridade: Stands4 API se disponível (DESABILITADA)
+      // if (this.stands4ApiKey) {
+      //   const result = await this.fetchFromStands4(variant.artist, variant.title);
+      //   if (result.found) {
+      //     console.log('✅ Letras encontradas via Stands4 (variante)');
+      //     return result;
+      //   }
+      // }
 
       // Tentar cada API gratuita
       for (const baseUrl of this.fallbackUrls) {
@@ -152,10 +155,17 @@ class LyricsService {
   }
 
   /**
-   * Busca letras usando Stands4 API
+   * Busca letras usando Stands4 API com proxy CORS
    */
   private async fetchFromStands4(artist: string, title: string): Promise<LyricsData> {
+    if (!this.stands4ApiKey) {
+      console.warn('🔑 Stands4 API key não fornecida');
+      return { lyrics: '', found: false, source: 'stands4' };
+    }
+
     try {
+      // Usar proxy CORS para contornar limitações do browser
+      const corsProxy = 'https://api.allorigins.win/raw?url=';
       const params = new URLSearchParams({
         uid: this.stands4ApiKey,
         tokenid: this.stands4ApiKey,
@@ -163,7 +173,17 @@ class LyricsService {
         format: 'json'
       });
 
-      const response = await fetch(`${this.stands4BaseUrl}?${params}`);
+      const targetUrl = `${this.stands4BaseUrl}?${params}`;
+      const proxyUrl = corsProxy + encodeURIComponent(targetUrl);
+
+      console.log(`🎵 Tentando Stands4 API para: ${artist} - ${title}`);
+
+      const response = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
 
       if (!response.ok) {
         console.warn(`❌ Stands4 API error: ${response.status}`);
@@ -177,6 +197,7 @@ class LyricsService {
         const lyrics = result.song_lyrics || '';
 
         if (lyrics.length > 50) {
+          console.log('✅ Letras encontradas via Stands4');
           return {
             lyrics,
             found: true,
@@ -197,23 +218,34 @@ class LyricsService {
   }
 
   /**
-   * Busca metadados usando Genius API
+   * Busca metadados usando Genius API com proxy CORS
    */
   private async fetchFromGenius(artist: string, title: string): Promise<LyricsData> {
+    if (!this.geniusApiKey) {
+      console.warn('🔑 Genius API key não fornecida');
+      return { lyrics: '', found: false, source: 'genius' };
+    }
+
     try {
+      // Usar proxy CORS para contornar limitações do browser
+      const corsProxy = 'https://api.allorigins.win/raw?url=';
       const searchParams = new URLSearchParams({
         q: `${artist} ${title}`
       });
 
-      const searchResponse = await fetch(
-        `${this.geniusBaseUrl}/search?${searchParams}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.geniusApiKey}`,
-            'User-Agent': 'Analisador Musical com IA'
-          }
+      const targetUrl = `${this.geniusBaseUrl}/search?${searchParams}`;
+      const proxyUrl = corsProxy + encodeURIComponent(targetUrl);
+
+      console.log(`🎤 Tentando Genius API para: ${artist} - ${title}`);
+
+      const searchResponse = await fetch(proxyUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${this.geniusApiKey}`,
+          'User-Agent': 'Analisador Musical com IA'
         }
-      );
+      });
 
       if (!searchResponse.ok) {
         console.warn(`❌ Genius search error: ${searchResponse.status}`);
@@ -226,7 +258,8 @@ class LyricsService {
         const hit = searchData.response.hits[0];
         const song = hit.result;
 
-        // Genius não fornece letras completas via API
+        console.log('✅ Metadados encontrados via Genius');
+        // Genius não fornece letras completas via API, mas fornece metadados úteis
         return {
           lyrics: `Música encontrada no Genius: ${song.full_title}`,
           found: false, // Não temos letras completas
@@ -271,10 +304,14 @@ class LyricsService {
       
       if (baseUrl.includes('lyrics.ovh')) {
         url = `${baseUrl}/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+      } else if (baseUrl.includes('lyrist.vercel.app')) {
+        url = `${baseUrl}/${encodeURIComponent(title)}/${encodeURIComponent(artist)}`;
       } else {
         url = `${baseUrl}/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
       }
       
+      console.log(`🎵 Tentando API: ${baseUrl} para ${artist} - ${title}`);
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -282,8 +319,9 @@ class LyricsService {
           'User-Agent': 'MusicAnalyzer/1.0'
         }
       });
-      
+
       if (!response.ok) {
+        console.warn(`❌ API ${baseUrl} retornou: ${response.status}`);
         throw new Error(`HTTP ${response.status}`);
       }
       
@@ -299,18 +337,20 @@ class LyricsService {
         lyrics = data;
       }
       
-      if (lyrics && lyrics.trim() && !lyrics.includes('error') && !lyrics.includes('not found')) {
+      if (lyrics && lyrics.trim() && lyrics.length > 50 && !lyrics.includes('error') && !lyrics.includes('not found')) {
+        console.log(`✅ Letras encontradas via ${baseUrl}`);
         return {
           lyrics: lyrics.trim(),
           found: true,
-          source: baseUrl
+          source: baseUrl,
+          ...this.analyzeLyricsStructure(lyrics)
         };
       }
       
       return { lyrics: '', found: false, source: baseUrl };
       
     } catch (error) {
-      console.warn(`Erro ao buscar letras em ${baseUrl}:`, error);
+      console.warn(`❌ Erro ao buscar letras em ${baseUrl}:`, error);
       return { lyrics: '', found: false, source: baseUrl };
     }
   }

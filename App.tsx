@@ -187,6 +187,12 @@ const App: React.FC = () => {
             <p className="text-xs text-slate-500 mt-2">
               Escolha o idioma para receber a análise musical completa.
             </p>
+            <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+              <p className="text-xs text-blue-300">
+                <strong>📝 Sobre as letras:</strong> As APIs de letras (Stands4/Genius) têm limitações de CORS no browser.
+                A análise lírica será baseada no conhecimento da IA sobre a música, que ainda é muito precisa para músicas populares.
+              </p>
+            </div>
           </div>
 
           <URLInput

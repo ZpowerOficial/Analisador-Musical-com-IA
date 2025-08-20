@@ -28,10 +28,13 @@ Uma ferramenta profissional que utiliza IA para análise musical completa de ní
 - **Métricas de Popularidade**: Score global, status de tendência, impacto cultural
 
 ### 📝 **Análise Literária das Letras**
-- **Busca Automática**: APIs gratuitas de letras
+- **Busca Automática**: APIs gratuitas de letras (limitações de CORS)
+- **Análise Baseada em IA**: Conhecimento extenso sobre músicas populares
 - **Análise Semântica**: Sentimento, temas, dispositivos literários
 - **Estrutura**: Versos, refrão, ponte, complexidade vocabular
 - **Contexto Cultural**: Referências regionais e urbanas
+
+> **⚠️ Nota**: APIs de letras (Stands4/Genius) têm limitações de CORS no browser. A análise lírica é baseada no conhecimento da IA, que é muito precisa para músicas conhecidas.
 
 ### 🎵 **Análise de Playlist**
 - **Detecção Automática**: Playlist vs vídeo individual
