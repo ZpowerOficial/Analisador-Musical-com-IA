@@ -258,7 +258,8 @@ const advancedAnalysisSchema = {
 async function consolidateMusicData(
   url: string,
   youtubeApiKey: string,
-  lastfmApiKey: string
+  lastfmApiKey: string,
+  onProgress?: (message: string) => void
 ): Promise<ConsolidatedMusicData | null> {
   const youtubeService = new YouTubeService(youtubeApiKey);
   const lastfmService = new LastFmService(lastfmApiKey);
@@ -278,14 +279,18 @@ async function consolidateMusicData(
     const { title, artist } = extractTitleAndArtist(youtubeData.title);
 
     // Obter dados do Last.fm
+    onProgress?.('🎶 Buscando dados de popularidade no Last.fm...');
     const lastfmTrackInfo = await lastfmService.getTrackInfo(artist, title);
     const lastfmArtistInfo = await lastfmService.getArtistInfo(artist);
     const popularityAnalysis = await lastfmService.getPopularityAnalysis(artist, title);
 
     // Obter letras da música
+    onProgress?.('📝 Buscando letras da música...');
     const lyricsData = await lyricsService.getLyrics(artist, title, youtubeData.title);
     const lyricsAnalysis = lyricsData.found ?
       lyricsService.analyzeLyricsContent(lyricsData.lyrics) : null;
+
+    onProgress?.('🔄 Consolidando dados para análise...');
 
     return {
       title,
@@ -491,7 +496,8 @@ export const analyzeMusic = async (
   url: string,
   geminiApiKey: string,
   youtubeApiKey: string,
-  lastfmApiKey: string
+  lastfmApiKey: string,
+  onProgress?: (message: string) => void
 ): Promise<Analysis> => {
     if (!geminiApiKey) {
         throw new Error("A chave de API da Gemini não foi fornecida.");
@@ -505,12 +511,15 @@ export const analyzeMusic = async (
         throw new Error("A chave de API do Last.fm não foi fornecida.");
     }
 
+    onProgress?.('📊 Coletando dados do YouTube...');
     // Consolidar dados de múltiplas fontes
-    const consolidatedData = await consolidateMusicData(url, youtubeApiKey, lastfmApiKey);
+    const consolidatedData = await consolidateMusicData(url, youtubeApiKey, lastfmApiKey, onProgress);
 
     if (!consolidatedData) {
         throw new Error("Não foi possível obter dados da música. Verifique se a URL é válida.");
     }
+
+    onProgress?.('🤖 Enviando para análise com IA Gemini...');
 
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
@@ -570,7 +579,8 @@ export const analyzePlaylist = async (
   geminiApiKey: string,
   youtubeApiKey: string,
   lastfmApiKey: string,
-  maxTracks: number = 20
+  maxTracks: number = 20,
+  onProgress?: (message: string) => void
 ): Promise<PlaylistAnalysis> => {
   const youtubeService = new YouTubeService(youtubeApiKey);
 
@@ -581,6 +591,7 @@ export const analyzePlaylist = async (
   }
 
   // Obter dados da playlist
+  onProgress?.('📋 Obtendo dados da playlist...');
   const playlistData = await youtubeService.getPlaylistData(playlistId, maxTracks);
   if (!playlistData) {
     throw new Error("Não foi possível obter dados da playlist.");
@@ -592,15 +603,15 @@ export const analyzePlaylist = async (
   let totalBPM = 0;
   let validBPMCount = 0;
 
-  console.log(`Analisando ${playlistData.videos.length} músicas da playlist...`);
+  onProgress?.(`🎵 Iniciando análise de ${playlistData.videos.length} músicas...`);
 
   for (let i = 0; i < playlistData.videos.length; i++) {
     const video = playlistData.videos[i];
-    console.log(`Analisando ${i + 1}/${playlistData.videos.length}: ${video.title}`);
+    onProgress?.(`🎶 Analisando ${i + 1}/${playlistData.videos.length}: ${video.title}`);
 
     try {
       const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
-      const analysis = await analyzeMusic(videoUrl, geminiApiKey, youtubeApiKey, lastfmApiKey);
+      const analysis = await analyzeMusic(videoUrl, geminiApiKey, youtubeApiKey, lastfmApiKey, onProgress);
 
       trackAnalyses.push(analysis);
 

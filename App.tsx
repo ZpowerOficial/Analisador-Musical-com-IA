@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isPlaylist, setIsPlaylist] = useState<boolean>(false);
+  const [progressMessage, setProgressMessage] = useState<string>('');
 
   // Chaves de API fixas (você forneceu)
   const YOUTUBE_API_KEY = 'AIzaSyCGnihQFuSZmND5hmpenx5JJ4oFzESdF_A';
@@ -48,16 +49,19 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
+    setProgressMessage('🔍 Iniciando análise...');
 
     try {
       if (isPlaylist) {
+        setProgressMessage('📋 Detectada playlist - Obtendo lista de músicas...');
         // Análise de playlist
         const playlistResult = await analyzePlaylist(
           youtubeUrl,
           geminiApiKey,
           YOUTUBE_API_KEY,
           LASTFM_API_KEY,
-          10 // Máximo 10 músicas para não exceder limites
+          10, // Máximo 10 músicas para não exceder limites
+          setProgressMessage // Callback para atualizar progresso
         );
 
         // Para compatibilidade, usar a primeira análise como resultado principal
@@ -68,12 +72,14 @@ const App: React.FC = () => {
           setError('Não foi possível analisar nenhuma música da playlist.');
         }
       } else {
+        setProgressMessage('🎵 Música individual detectada - Coletando dados...');
         // Análise de música individual
         const result = await analyzeMusic(
           youtubeUrl,
           geminiApiKey,
           YOUTUBE_API_KEY,
-          LASTFM_API_KEY
+          LASTFM_API_KEY,
+          setProgressMessage // Callback para atualizar progresso
         );
 
         if (result.error) {
@@ -92,6 +98,7 @@ const App: React.FC = () => {
       }
     } finally {
       setIsLoading(false);
+      setProgressMessage('');
     }
   }, [youtubeUrl, geminiApiKey, isPlaylist, YOUTUBE_API_KEY, LASTFM_API_KEY]);
 
@@ -143,6 +150,7 @@ const App: React.FC = () => {
             onAnalyze={handleAnalyze}
             isLoading={isLoading}
             isPlaylist={isPlaylist}
+            progressMessage={progressMessage}
           />
         </div>
 
